@@ -144,7 +144,7 @@ const MetricCard = ({ label, value, sub, highlight, verdictKey }) => {
           </button>
         )}
       </div>
-      <span style={{ fontSize: 28, fontFamily: "'Syne',sans-serif", fontWeight: 700, color: statusColor || "#e8eaf6", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</span>
+      <span style={{ fontSize: 28, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: statusColor || "#e8eaf6", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</span>
       {sub && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'Space Mono',monospace" }}>{sub}</span>}
       {open && desc && (
         <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.07)", fontSize: 11, color: "rgba(255,255,255,0.55)", fontFamily: "'Space Mono',monospace", lineHeight: 1.7, whiteSpace: "pre-line" }}>{desc}</div>
@@ -199,7 +199,7 @@ const GoNoGoBanner = ({ verdictKey, dPayback, confidenceNPV }) => {
         <span style={{ fontSize: 28, color: cfg.color }}>{cfg.icon}</span>
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 24, fontFamily: "'Syne',sans-serif", fontWeight: 800, color: cfg.color, letterSpacing: "0.04em", lineHeight: 1.15 }}>{cfg.label}</div>
+        <div style={{ fontSize: 24, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, color: cfg.color, letterSpacing: "0.04em", lineHeight: 1.15 }}>{cfg.label}</div>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "'Space Mono',monospace", marginTop: 5 }}>{cfg.desc}</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, flexShrink: 0, minWidth: 280 }}>
@@ -288,7 +288,7 @@ export default function CapExAnalyzer() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #080c14; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -308,7 +308,7 @@ export default function CapExAnalyzer() {
                 <img src="https://i.imgur.com/vS9wbFB.png" width="36" height="36" style={{ borderRadius: 6, objectFit: "cover" }} />
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 20, fontFamily: "'Syne',sans-serif", fontWeight: 800, color: "#ffffff", letterSpacing: "0.02em" }}>CapEx Financial Analyzer</span>
+                    <span style={{ fontSize: 20, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em" }}>CapEx Financial Analyzer</span>
                   </div>
                   <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.14em", fontFamily: "'Space Mono',monospace", marginTop: 2 }}>INVESTMENT DECISION FRAMEWORK · AMAZON INTERNAL</div>
                 </div>
@@ -335,7 +335,7 @@ export default function CapExAnalyzer() {
 
             {/* Input Panel */}
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 22, display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ fontSize: 11, fontFamily: "'Syne',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>Project Parameters</div>
+              <div style={{ fontSize: 11, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>Project Parameters</div>
 
               <InputField label="Initial Investment" value={state.initialInvestment} onChange={update("initialInvestment")} />
               <InputField label="WACC" value={state.wacc} onChange={update("wacc")} isRate integerRate />
@@ -398,7 +398,7 @@ export default function CapExAnalyzer() {
                       ].map(({ label, value, color }) => (
                         <div key={label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                           <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>{label}</span>
-                          <span style={{ fontSize: 12, color: color || "#e8eaf6", fontFamily: "'Syne',sans-serif", fontWeight: 700 }}>{value}</span>
+                          <span style={{ fontSize: 12, color: color || "#e8eaf6", fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700 }}>{value}</span>
                         </div>
                       ))}
                     </div>
@@ -466,7 +466,7 @@ export default function CapExAnalyzer() {
             {/* Chart 1 */}
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "22px 22px 12px" }}>
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 13, fontFamily: "'Syne',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Annual Entitlement + Cumulative</div>
+                <div style={{ fontSize: 13, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Annual Entitlement + Cumulative</div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
                   Y0 = CapEx investment · Y1–Y3 = annual entitlement · Line = cumulative
                 </div>
@@ -520,7 +520,7 @@ export default function CapExAnalyzer() {
             {/* Chart 2 */}
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "22px 22px 12px" }}>
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 13, fontFamily: "'Syne',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>NPV Sensitivity vs WACC</div>
+                <div style={{ fontSize: 13, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>NPV Sensitivity vs WACC</div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
                   Green = profitable · Red = value destroying · Yellow = your WACC
                   {m?.irr != null && <span style={{ color: m.irr > state.wacc ? "#00e5a0" : "#ff4d6d", marginLeft: 6, fontWeight: 700 }}>· IRR = {fmtPct(m.irr)}{m.irr < state.wacc ? " ✗ Below WACC" : ""}</span>}
