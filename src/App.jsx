@@ -305,7 +305,7 @@ export default function CapExAnalyzer() {
             {/* Amazon-style logo mark */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {/* Amazon logo */}
-                <img src="/AmazonMobileApp.png" width="36" height="36" style={{ borderRadius: 6, objectFit: "cover" }} />
+                <img src="https://i.imgur.com/vS9wbFB.png" width="36" height="36" style={{ borderRadius: 6, objectFit: "cover" }} />
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                     <span style={{ fontSize: 20, fontFamily: "'Syne',sans-serif", fontWeight: 800, color: "#ffffff", letterSpacing: "0.02em" }}>CapEx Financial Analyzer</span>
