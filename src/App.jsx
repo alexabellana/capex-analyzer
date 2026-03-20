@@ -312,9 +312,9 @@ export default function CapExAnalyzer() {
                 </svg>
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 15, fontFamily: "'Syne',sans-serif", fontWeight: 800, color: "#ffffff", letterSpacing: "0.01em" }}>CapEx Financial Analyzer</span>
+                    <span style={{ fontSize: 20, fontFamily: "'Syne',sans-serif", fontWeight: 800, color: "#ffffff", letterSpacing: "0.02em" }}>CapEx Financial Analyzer</span>
                   </div>
-                  <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "0.12em", fontFamily: "'Space Mono',monospace", marginTop: 1 }}>INVESTMENT DECISION FRAMEWORK · AMAZON INTERNAL</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.14em", fontFamily: "'Space Mono',monospace", marginTop: 2 }}>INVESTMENT DECISION FRAMEWORK · AMAZON INTERNAL</div>
                 </div>
               </div>
           </div>
