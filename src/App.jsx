@@ -305,11 +305,7 @@ export default function CapExAnalyzer() {
             {/* Amazon-style logo mark */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {/* Amazon logo */}
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-                  <rect width="34" height="34" rx="7" fill="#FF9900"/>
-                  <path d="M9 20 Q17 26 25 20" stroke="#0a0d14" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
-                  <path d="M23.5 18.5 L25 20 L23 20.8" stroke="#0a0d14" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                </svg>
+                <img src="/AmazonMobileApp.png" width="36" height="36" style={{ borderRadius: 6, objectFit: "cover" }} />
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                     <span style={{ fontSize: 20, fontFamily: "'Syne',sans-serif", fontWeight: 800, color: "#ffffff", letterSpacing: "0.02em" }}>CapEx Financial Analyzer</span>
