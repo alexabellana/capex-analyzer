@@ -267,10 +267,15 @@ export default function CapExAnalyzer() {
     const { y0Ent, y1, y2, y3 } = adjustedCashflows;
     const totalInflows = y0Ent + y1 + y2 + (state.startMonth > 1 ? y3 : 0);
     const roi = (totalInflows - state.initialInvestment) / state.initialInvestment;
-    const pv_inflows = allCashflows.slice(1).reduce((acc, cf, t) => acc + cf / Math.pow(1 + state.wacc, t + 1), 0)
-      + (adjustedCashflows.y0Ent > 0 ? adjustedCashflows.y0Ent : 0); // Y0 entitlement not discounted
+    // PV of all inflows: Y0 entitlement at t=0 (no discount) + Y1/Y2/Y3 discounted
+    const pv_inflows = y0Ent + allCashflows.slice(1).reduce((acc, cf, t) => acc + cf / Math.pow(1 + state.wacc, t + 1), 0);
+    // Confidence NPV: recalculate NPV applying confidence factor to all inflows
+    const confidenceCFs = allCashflows.map((cf, t) => t === 0
+      ? -state.initialInvestment + (y0Ent * state.confidenceFactor)
+      : cf * state.confidenceFactor
+    );
+    const confidenceNPV = calcNPV(state.wacc, confidenceCFs);
     const breakEvenConfidence = pv_inflows > 0 ? state.initialInvestment / pv_inflows : null;
-    const confidenceNPV = npv * state.confidenceFactor;
     return { npv, irr, payback, dPayback, roi, confidenceNPV, breakEvenConfidence };
   }, [allCashflows, state, parsedCashflows, adjustedCashflows]);
 
@@ -652,4 +657,3 @@ export default function CapExAnalyzer() {
     </>
   );
 }
-
