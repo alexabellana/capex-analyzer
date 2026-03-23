@@ -198,7 +198,7 @@ const InputField = ({ label, value, onChange, isRate = false, integerRate = fals
 
 // ─── GoNoGo Banner ────────────────────────────────────────────────────────────
 
-const GoNoGoBanner = ({ verdictKey, dPayback, confidenceNPV }) => {
+const GoNoGoBanner = ({ verdictKey, dPayback, npv }) => {
   const cfg = VERDICT_CONFIG[verdictKey] || VERDICT_CONFIG["NO-GO"];
   return (
     <div style={{ background: cfg.bg, border: `2px solid ${cfg.border}`, borderRadius: 16, padding: "24px 32px", display: "flex", alignItems: "center", gap: 24, position: "relative", overflow: "hidden" }}>
@@ -213,7 +213,7 @@ const GoNoGoBanner = ({ verdictKey, dPayback, confidenceNPV }) => {
       <div style={{ display: "flex", flexDirection: "column", gap: 10, flexShrink: 0, minWidth: 280 }}>
         {[
           { label: "Discounted Payback < 2.5 years", ok: dPayback !== null && dPayback < 2.5 },
-          { label: "NPV > 0", ok: confidenceNPV !== null && confidenceNPV > 0 },
+          { label: "NPV > 0", ok: npv !== null && npv > 0 },
         ].map(({ label, ok }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, background: ok ? "rgba(0,229,160,0.06)" : "rgba(255,77,109,0.06)", border: `1px solid ${ok ? "rgba(0,229,160,0.2)" : "rgba(255,77,109,0.2)"}`, borderRadius: 8, padding: "8px 14px" }}>
             <span style={{ fontSize: 16, color: ok ? "#00e5a0" : "#ff4d6d", flexShrink: 0 }}>{ok ? "✓" : "✗"}</span>
@@ -371,7 +371,7 @@ export default function CapExAnalyzer() {
         <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
 
           {/* Banner */}
-          <GoNoGoBanner verdictKey={verdictKey} dPayback={m?.dPayback ?? null} confidenceNPV={m?.confidenceNPV ?? null} />
+          <GoNoGoBanner verdictKey={verdictKey} dPayback={m?.dPayback ?? null} npv={m?.npv ?? null} />
 
           {/* Main grid */}
           <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: 20 }}>
