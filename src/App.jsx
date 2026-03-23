@@ -71,21 +71,21 @@ function calcDiscountedPayback(cashflows, rate) {
 }
 
 // ─── Verdict (3-tier) ─────────────────────────────────────────────────────────
+// NOTE: AMBER_CONFIDENCE (Disc.PB < 2.5 AND Confidence NPV < 0) is mathematically
+// impossible: if Disc.PB < 2.5 then NPV > 0, therefore Confidence NPV = NPV*factor > 0.
+// The only meaningful verdicts are GO, AMBER_PAYBACK, and NO-GO.
 
-function calcVerdict(dPayback, confidenceNPV) {
+function calcVerdict(dPayback) {
   if (dPayback === null) return "NO-GO";
   if (dPayback > 3) return "NO-GO";
   if (dPayback >= 2.5) return "AMBER_PAYBACK";
-  // dPayback < 2.5 — check confidence NPV
-  if (confidenceNPV !== null && confidenceNPV < 0) return "AMBER_CONFIDENCE";
   return "GO";
 }
 
 const VERDICT_CONFIG = {
-  "GO":               { color: "#00e5a0", bg: "rgba(0,229,160,0.08)",   border: "#00e5a060", label: "GO",      icon: "▲", desc: "Project meets financial criteria" },
-  "AMBER_PAYBACK":    { color: "#ffd166", bg: "rgba(255,209,102,0.08)", border: "#ffd16660", label: "REQUIRES FINANCIAL STRATEGIC ALIGNMENT", icon: "◆", desc: "Discounted Payback is between 2.5 and 3 years" },
-  "AMBER_CONFIDENCE": { color: "#ffd166", bg: "rgba(255,209,102,0.08)", border: "#ffd16660", label: "REQUIRES FINANCIAL STRATEGIC ALIGNMENT", icon: "◆", desc: "Discounted Payback ≤ 2.5 years but Confidence NPV is negative" },
-  "NO-GO":            { color: "#ff4d6d", bg: "rgba(255,77,109,0.08)",  border: "#ff4d6d60", label: "NO-GO",   icon: "▼", desc: "Discounted Payback exceeds 3 years" },
+  "GO":            { color: "#00e5a0", bg: "rgba(0,229,160,0.08)",   border: "#00e5a060", label: "GO",      icon: "▲", desc: "Project meets financial criteria" },
+  "AMBER_PAYBACK": { color: "#ffd166", bg: "rgba(255,209,102,0.08)", border: "#ffd16660", label: "REQUIRES FINANCIAL STRATEGIC ALIGNMENT", icon: "◆", desc: "Discounted Payback is between 2.5 and 3 years" },
+  "NO-GO":         { color: "#ff4d6d", bg: "rgba(255,77,109,0.08)",  border: "#ff4d6d60", label: "NO-GO",   icon: "▼", desc: "Discounted Payback exceeds 3 years" },
 };
 
 // ─── Default State ─────────────────────────────────────────────────────────────
@@ -94,10 +94,16 @@ const DEFAULT = {
   initialInvestment: 1000000,
   wacc: 0.10,
   confidenceFactor: 0.85,
-  cashflows: [200000, 280000, 320000],
+  cashflows: [420000, 420000, 420000],
+  startMonth: 1,
 };
 
 const WACC_RANGE = Array.from({ length: 21 }, (_, i) => i * 0.01 + 0.02);
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
 
 // ─── Descriptions ─────────────────────────────────────────────────────────────
 
@@ -205,7 +211,7 @@ const GoNoGoBanner = ({ verdictKey, dPayback, confidenceNPV }) => {
       <div style={{ display: "flex", flexDirection: "column", gap: 10, flexShrink: 0, minWidth: 280 }}>
         {[
           { label: "Discounted Payback < 2.5 years", ok: dPayback !== null && dPayback < 2.5 },
-          { label: "Confidence NPV > 0", ok: confidenceNPV !== null && confidenceNPV > 0 },
+          { label: "NPV > 0", ok: confidenceNPV !== null && confidenceNPV > 0 },
         ].map(({ label, ok }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, background: ok ? "rgba(0,229,160,0.06)" : "rgba(255,77,109,0.06)", border: `1px solid ${ok ? "rgba(0,229,160,0.2)" : "rgba(255,77,109,0.2)"}`, borderRadius: 8, padding: "8px 14px" }}>
             <span style={{ fontSize: 16, color: ok ? "#00e5a0" : "#ff4d6d", flexShrink: 0 }}>{ok ? "✓" : "✗"}</span>
@@ -227,10 +233,36 @@ export default function CapExAnalyzer() {
     [yearCFs.y1, yearCFs.y2, yearCFs.y3].map(v => Math.round(Number(v))).filter(v => !isNaN(v) && v !== 0)
   ), [yearCFs]);
 
-  // Y0 = -investment only, Y1-Y3 = entitlement
-  const allCashflows = useMemo(() => (
-    [-state.initialInvestment, ...parsedCashflows]
-  ), [state.initialInvestment, parsedCashflows]);
+  // Fractional months based on start month
+  // Y0: months from startMonth to December = (12 - startMonth + 1)
+  // Y1, Y2: always 12 months
+  // Y3: months from January to startMonth-1 = (startMonth - 1)
+  const adjustedCashflows = useMemo(() => {
+    if (parsedCashflows.length === 0) return [];
+    const m = state.startMonth;
+    if (m === 1) return parsedCashflows; // January = no adjustment needed
+    const y0Months = 12 - m + 1;
+    const y3Months = m - 1;
+    return [
+      Math.round(parsedCashflows[0] * y0Months / 12),   // Y0 partial
+      parsedCashflows[0],                                 // Y1 full
+      parsedCashflows[1] || 0,                           // Y2 full
+      Math.round((parsedCashflows[2] || parsedCashflows[1] || parsedCashflows[0]) * y3Months / 12), // Y3 partial
+    ];
+  }, [parsedCashflows, state.startMonth]);
+
+  // allCashflows: [Y0_investment+partial, Y1, Y2, Y3_partial]
+  // If January: Y0 = just investment, Y1/Y2/Y3 full
+  // If other month: Y0 = investment + partial entitlement (t=0, no discount), Y1/Y2 full, Y3 partial
+  const allCashflows = useMemo(() => {
+    if (parsedCashflows.length === 0) return [-state.initialInvestment];
+    const m = state.startMonth;
+    if (m === 1) {
+      return [-state.initialInvestment, ...parsedCashflows];
+    }
+    const [y0Ent, y1, y2, y3] = adjustedCashflows;
+    return [-state.initialInvestment + y0Ent, y1, y2, y3];
+  }, [state.initialInvestment, parsedCashflows, adjustedCashflows, state.startMonth]);
 
   const metrics = useMemo(() => {
     if (parsedCashflows.length === 0) return null;
@@ -238,13 +270,15 @@ export default function CapExAnalyzer() {
     const irr = calcIRR(allCashflows);
     const payback = calcPayback(allCashflows);
     const dPayback = calcDiscountedPayback(allCashflows, state.wacc);
-    const totalInflows = parsedCashflows.reduce((a, b) => a + b, 0);
+    // Total actual inflows = all cashflows except Y0 investment
+    const totalInflows = allCashflows.slice(1).reduce((a, b) => a + b, 0)
+      + (state.startMonth > 1 && adjustedCashflows.length > 0 ? adjustedCashflows[0] : 0);
     const roi = (totalInflows - state.initialInvestment) / state.initialInvestment;
     const confidenceNPV = npv * state.confidenceFactor;
     return { npv, irr, payback, dPayback, roi, confidenceNPV };
-  }, [allCashflows, state, parsedCashflows]);
+  }, [allCashflows, state, parsedCashflows, adjustedCashflows]);
 
-  const verdictKey = useMemo(() => calcVerdict(metrics?.dPayback ?? null, metrics?.confidenceNPV ?? null), [metrics]);
+  const verdictKey = useMemo(() => calcVerdict(metrics?.dPayback ?? null), [metrics]);
 
   const cfSummary = useMemo(() => {
     if (!parsedCashflows.length) return null;
@@ -262,19 +296,33 @@ export default function CapExAnalyzer() {
   }, [parsedCashflows]);
 
   const entitlementChartData = useMemo(() => {
+    const m = state.startMonth;
+    const y0Months = m === 1 ? 0 : (12 - m + 1);
+    const y3Months = m === 1 ? 12 : (m - 1);
     let cum = 0, cumDisc = 0;
     return allCashflows.map((cf, t) => {
       cum += cf;
       cumDisc += cf / Math.pow(1 + state.wacc, t);
+      const isY0 = t === 0;
+      const isY3 = t === allCashflows.length - 1 && m > 1;
+      const months = isY0 ? y0Months : isY3 ? y3Months : 12;
+      const label = isY0
+        ? (m === 1 ? "Y0" : `Y0 (${y0Months}m)`)
+        : isY3
+        ? `Y3 (${y3Months}m)`
+        : `Y${t}`;
       return {
-        year: t === 0 ? "Y0" : `Y${t}`,
-        investment: t === 0 ? -state.initialInvestment : null,
-        entitlement: t > 0 ? Math.round(cf) : null,
+        year: label,
+        investment: isY0 ? -state.initialInvestment : null,
+        partial: isY0 && m > 1 ? Math.round(adjustedCashflows[0]) : null,
+        entitlement: !isY0 ? Math.round(cf) : null,
         cumulative: Math.round(cum),
         discounted: Math.round(cumDisc),
+        isPartialYear: (isY0 && m > 1) || isY3,
+        months,
       };
     });
-  }, [allCashflows, state.wacc]);
+  }, [allCashflows, state.wacc, state.startMonth, state.initialInvestment, adjustedCashflows]);
 
   const sensitivityData = useMemo(() => (
     WACC_RANGE.map(r => ({ wacc: `${(r * 100).toFixed(0)}%`, npv: Math.round(calcNPV(r, allCashflows)) }))
@@ -384,6 +432,36 @@ export default function CapExAnalyzer() {
                   ))}
                 </div>
 
+                {/* Start Month Selector */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "rgba(255,153,0,0.05)", border: "1px solid rgba(255,153,0,0.2)", borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <label style={{ fontSize: 10, color: "#FF9900", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>Entitlement Start Month (Y0)</label>
+                  </div>
+                  <select value={state.startMonth}
+                    onChange={e => setState(s => ({ ...s, startMonth: parseInt(e.target.value) }))}
+                    style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,153,0,0.3)", borderRadius: 7, padding: "8px 10px", color: "#e8eaf6", fontSize: 12, fontFamily: "'Space Mono',monospace", outline: "none", cursor: "pointer" }}>
+                    {MONTHS.map((mo, i) => <option key={i} value={i + 1} style={{ background: "#0d1520" }}>{mo}</option>)}
+                  </select>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>
+                    Entitlement starts materialising in Y0. The 3YF window ends on the same month in Y3.
+                  </span>
+                  {state.startMonth > 1 && parsedCashflows.length > 0 && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: 2 }}>
+                      {[
+                        { label: `Y0 (${12 - state.startMonth + 1}m)`, value: fmt(adjustedCashflows[0] || 0, 0), color: "rgba(0,229,160,0.7)" },
+                        { label: "Y1 (12m)", value: fmt(adjustedCashflows[1] || 0, 0), color: "#e8eaf6" },
+                        { label: "Y2 (12m)", value: fmt(adjustedCashflows[2] || 0, 0), color: "#e8eaf6" },
+                        { label: `Y3 (${state.startMonth - 1}m)`, value: fmt(adjustedCashflows[3] || 0, 0), color: "rgba(0,229,160,0.7)" },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "center" }}>
+                          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>{label}</span>
+                          <span style={{ fontSize: 10, color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>
                 </span>
 
@@ -489,10 +567,11 @@ export default function CapExAnalyzer() {
                     }}
                   />
                   <ReferenceLine y={0} stroke="rgba(255,255,255,0.25)" strokeWidth={1.5} />
-                  <Bar dataKey="investment" stackId="main" fill="rgba(255,77,109,0.6)" radius={[4, 4, 4, 4]} />
-                  <Bar dataKey="entitlement" stackId="main" radius={[4, 4, 4, 4]}>
+                  <Bar dataKey="investment" stackId="main" fill="rgba(255,77,109,0.6)" radius={[0, 0, 4, 4]} />
+                  <Bar dataKey="partial" stackId="main" fill="rgba(0,229,160,0.35)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="entitlement" stackId="main" radius={[4, 4, 0, 0]}>
                     {entitlementChartData.map((entry, i) => (
-                      <Cell key={i} fill="rgba(0,229,160,0.55)" />
+                      <Cell key={i} fill={entry.isPartialYear ? "rgba(0,229,160,0.35)" : "rgba(0,229,160,0.6)"} />
                     ))}
                   </Bar>
                   <Line type="monotone" dataKey="cumulative" stroke="#00e5a0" strokeWidth={2.5} dot={{ fill: "#00e5a0", r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
@@ -501,8 +580,9 @@ export default function CapExAnalyzer() {
               </ResponsiveContainer>
               <div style={{ display: "flex", gap: 14, marginTop: 8, justifyContent: "center", flexWrap: "wrap" }}>
                 {[
-                  { color: "rgba(255,77,109,0.6)",  label: "CapEx (Y0)", box: true },
-                  { color: "rgba(0,229,160,0.55)",  label: "Entitlement (Y1–Y3)", box: true },
+                  { color: "rgba(255,77,109,0.6)", label: "CapEx (Y0)", box: true },
+                  { color: "rgba(0,229,160,0.6)", label: "Full year entitlement", box: true },
+                  { color: "rgba(0,229,160,0.35)", label: "Partial year", box: true },
                   { color: "#00e5a0", label: "Cumulative" },
                   { color: "#0096ff", label: "Disc. Cumulative", dashed: true },
                 ].map(({ color, label, dashed, box }) => (
