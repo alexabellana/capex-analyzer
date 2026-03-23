@@ -112,6 +112,7 @@ const METRIC_DESCRIPTIONS = {
   "Discounted Payback": "How many years to recover your investment using the real value of money (discounted at WACC).\n• GO: < 2.5 years\n• Requires Financial Strategic Alignment: 2.5–3 years\n• NO-GO: > 3 years",
   "ROI": "Total return on the investment without adjusting for time. An ROI of 50% means you recover the investment and earn an additional 50%. Easy to communicate to any stakeholder.",
   "Confidence NPV": "The NPV scaled by your confidence level. If negative, the project may not be investment-ready even under optimistic assumptions — triggers a Requires Financial Strategic Alignment verdict.",
+  "Break-even Confidence": "The minimum confidence factor at which the project still breaks even — i.e. the entitlement shortfall the project can absorb before destroying value. Formula: Initial Investment / PV of all inflows. If 65%, the project survives even if entitlement underdelivers by 35%. The higher your actual confidence factor above this threshold, the more margin of safety you have.",
   "IRR": "The project's intrinsic annual return rate. If it exceeds your WACC, the project earns more than it costs to fund.",
   "Simple Payback": "How many years to recover the investment using undiscounted entitlement. Easier to communicate but less rigorous than Discounted Payback.",
 };
@@ -266,8 +267,11 @@ export default function CapExAnalyzer() {
     const { y0Ent, y1, y2, y3 } = adjustedCashflows;
     const totalInflows = y0Ent + y1 + y2 + (state.startMonth > 1 ? y3 : 0);
     const roi = (totalInflows - state.initialInvestment) / state.initialInvestment;
+    const pv_inflows = allCashflows.slice(1).reduce((acc, cf, t) => acc + cf / Math.pow(1 + state.wacc, t + 1), 0)
+      + (adjustedCashflows.y0Ent > 0 ? adjustedCashflows.y0Ent : 0); // Y0 entitlement not discounted
+    const breakEvenConfidence = pv_inflows > 0 ? state.initialInvestment / pv_inflows : null;
     const confidenceNPV = npv * state.confidenceFactor;
-    return { npv, irr, payback, dPayback, roi, confidenceNPV };
+    return { npv, irr, payback, dPayback, roi, confidenceNPV, breakEvenConfidence };
   }, [allCashflows, state, parsedCashflows, adjustedCashflows]);
 
   const verdictKey = useMemo(() => calcVerdict(metrics?.dPayback ?? null), [metrics]);
@@ -518,6 +522,16 @@ export default function CapExAnalyzer() {
                   <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Risk Metrics</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
                     <MetricCard label="Confidence NPV" value={fmt(m.confidenceNPV)} sub={`@ ${fmtPct(state.confidenceFactor)} confidence`} verdictKey={m.confidenceNPV > 0 ? "GO" : "NO-GO"} />
+                    <MetricCard
+                      label="Break-even Confidence"
+                      value={m.breakEvenConfidence !== null ? fmtPct(m.breakEvenConfidence) : "N/A"}
+                      sub={m.breakEvenConfidence !== null
+                        ? state.confidenceFactor > m.breakEvenConfidence
+                          ? `${fmtPct(state.confidenceFactor - m.breakEvenConfidence)} safety margin`
+                          : "Confidence below break-even"
+                        : ""}
+                      verdictKey={m.breakEvenConfidence !== null && state.confidenceFactor > m.breakEvenConfidence ? "GO" : "NO-GO"}
+                    />
                   </div>
                 </>
               ) : (
@@ -638,3 +652,4 @@ export default function CapExAnalyzer() {
     </>
   );
 }
+
