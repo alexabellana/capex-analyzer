@@ -233,28 +233,21 @@ export default function CapExAnalyzer() {
     [yearCFs.y1, yearCFs.y2, yearCFs.y3].map(v => Math.round(Number(v))).filter(v => !isNaN(v) && v !== 0)
   ), [yearCFs]);
 
-  // ── 36-month window based on start month ────────────────────────────────────
-  // January:  Y0(12m) + Y1(12m) + Y2(12m) = no Y3
-  // May:      Y0(8m)  + Y1(12m) + Y2(12m) + Y3(4m)
-  // December: Y0(1m)  + Y1(12m) + Y2(12m) + Y3(11m)
-  // Total always = 36 months
   const adjustedCashflows = useMemo(() => {
-    if (parsedCashflows.length === 0) return [];
     const m = state.startMonth;
-    const y0Months = 12 - m + 1;   // Jan=12, May=8, Dec=1
-    const y3Months = m - 1;        // Jan=0,  May=4, Dec=11
-    const y0Ent = Math.round(parsedCashflows[0] * y0Months / 12);
-    const y1    = parsedCashflows[0];
-    const y2    = parsedCashflows[1] || parsedCashflows[0];
-    const y3    = Math.round((parsedCashflows[2] || parsedCashflows[1] || parsedCashflows[0]) * y3Months / 12);
+    const y0Months = 12 - m + 1;
+    const y3Months = m - 1;
+    if (parsedCashflows.length === 0) {
+      return { y0Ent: 0, y1: 0, y2: 0, y3: 0, y0Months, y3Months };
+    }
+    const annual = parsedCashflows[0];
+    const y0Ent = Math.round(annual * y0Months / 12);
+    const y1    = annual;
+    const y2    = parsedCashflows[1] || annual;
+    const y3    = Math.round((parsedCashflows[2] || parsedCashflows[1] || annual) * y3Months / 12);
     return { y0Ent, y1, y2, y3, y0Months, y3Months };
   }, [parsedCashflows, state.startMonth]);
 
-  // allCashflows for financial calculations:
-  // t=0: -investment + Y0 entitlement (no discount on Y0 entitlement)
-  // t=1: Y1 full
-  // t=2: Y2 full
-  // t=3: Y3 partial (only if startMonth > 1)
   const allCashflows = useMemo(() => {
     if (parsedCashflows.length === 0) return [-state.initialInvestment];
     const { y0Ent, y1, y2, y3 } = adjustedCashflows;
@@ -295,30 +288,22 @@ export default function CapExAnalyzer() {
   }, [parsedCashflows]);
 
   const entitlementChartData = useMemo(() => {
-    const m = state.startMonth;
-    const { y0Months, y3Months } = adjustedCashflows.y0Months !== undefined ? adjustedCashflows : { y0Months: 12, y3Months: 0 };
+    const { y0Months, y3Months, y0Ent } = adjustedCashflows;
     let cum = 0, cumDisc = 0;
     return allCashflows.map((cf, t) => {
       cum += cf;
       cumDisc += cf / Math.pow(1 + state.wacc, t);
       const isY0 = t === 0;
-      const isY3 = t === allCashflows.length - 1 && m > 1 && t > 2;
-      const isPartialYear = isY0 || isY3;
-      const months = isY0 ? y0Months : isY3 ? y3Months : 12;
-      const label = isY0
-        ? `Y0 (${y0Months}m)`
-        : isY3
-        ? `Y3 (${y3Months}m)`
-        : `Y${t}`;
+      const isY3 = t === allCashflows.length - 1 && state.startMonth > 1 && t >= 3;
+      const label = isY0 ? `Y0 (${y0Months}m)` : isY3 ? `Y3 (${y3Months}m)` : `Y${t}`;
       return {
         year: label,
         investment: isY0 ? -state.initialInvestment : null,
-        partial: isY0 && adjustedCashflows.y0Ent > 0 ? adjustedCashflows.y0Ent : null,
+        partial: isY0 && y0Ent > 0 ? y0Ent : null,
         entitlement: !isY0 ? Math.round(cf) : null,
         cumulative: Math.round(cum),
         discounted: Math.round(cumDisc),
-        isPartialYear,
-        months,
+        isPartialYear: isY0 || isY3,
       };
     });
   }, [allCashflows, state.wacc, state.startMonth, state.initialInvestment, adjustedCashflows]);
@@ -446,7 +431,7 @@ export default function CapExAnalyzer() {
                   </span>
                   {parsedCashflows.length > 0 && (
                     <div style={{ display: "grid", gridTemplateColumns: state.startMonth === 1 ? "1fr 1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 6, marginTop: 2 }}>
-                      {state.startMonth === 1 ? [
+                      {(state.startMonth === 1 ? [
                         { label: `Y0 (12m)`, value: fmt(adjustedCashflows.y0Ent || 0, 0), color: "rgba(0,229,160,0.7)" },
                         { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0), color: "#e8eaf6" },
                         { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0), color: "#e8eaf6" },
@@ -455,7 +440,7 @@ export default function CapExAnalyzer() {
                         { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0), color: "#e8eaf6" },
                         { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0), color: "#e8eaf6" },
                         { label: `Y3 (${adjustedCashflows.y3Months}m)`, value: fmt(adjustedCashflows.y3 || 0, 0), color: "rgba(0,229,160,0.7)" },
-                      ].map(({ label, value, color }) => (
+                      ]).map(({ label, value, color }) => (
                         <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "center" }}>
                           <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>{label}</span>
                           <span style={{ fontSize: 10, color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>{value}</span>
