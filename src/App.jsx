@@ -837,3 +837,4 @@ export default function CapExAnalyzer() {
     </>
   );
 }
+
