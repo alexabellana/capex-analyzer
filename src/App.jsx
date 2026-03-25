@@ -93,9 +93,16 @@ const VERDICT_CONFIG = {
 const DEFAULT = {
   initialInvestment: 1000000,
   wacc: 0.10,
-  confidenceFactor: 0.85,
+  riskCategory: "low",
   cashflows: [420000, 420000, 420000],
   startMonth: 1,
+};
+
+const RISK_PREMIUMS = { low: 0, medium: 0.025, high: 0.05 };
+const RISK_CONFIG = {
+  low:    { label: "Low",    color: "#1D9E75", bg: "rgba(29,158,117,0.08)",  border: "rgba(29,158,117,0.3)",  premium: "+0%",   desc: "Committed baseline. Proven technology. Low execution variance." },
+  medium: { label: "Medium", color: "#BA7517", bg: "rgba(186,117,23,0.08)",  border: "rgba(186,117,23,0.3)",  premium: "+2.5%", desc: "Reasonable assumptions. Some execution risk or dependencies." },
+  high:   { label: "High",   color: "#A32D2D", bg: "rgba(163,45,45,0.08)",   border: "rgba(163,45,45,0.3)",   premium: "+5%",   desc: "Uncertain forecast. New technology or significant dependencies." },
 };
 
 const WACC_RANGE = Array.from({ length: 21 }, (_, i) => i * 0.01 + 0.02);
@@ -104,17 +111,15 @@ const MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December"
 ];
+// startMonth=0 is the special "January Y+1" case — no Y0 entitlement, full Y1/Y2/Y3
 
 // ─── Descriptions ─────────────────────────────────────────────────────────────
 
 const METRIC_DESCRIPTIONS = {
-  "NPV": "How much real value the project creates today, after discounting future entitlement at the WACC. A positive NPV means the project generates net value on top of repaying all capital costs. This is the single most important metric.",
-  "Discounted Payback": "How many years to recover your investment using the real value of money (discounted at WACC).\n• GO: < 2.5 years\n• Requires Financial Strategic Alignment: 2.5–3 years\n• NO-GO: > 3 years",
+  "NPV": "How much real value the project creates today, after discounting future entitlement at the effective WACC (base WACC + risk premium). A positive NPV means the project generates net value on top of repaying all capital costs. This is the single most important metric.",
+  "Discounted Payback": "How many years to recover your investment using the real value of money (discounted at the effective WACC).\n• GO: < 2.5 years\n• Requires Financial Strategic Alignment: 2.5–3 years\n• NO-GO: > 3 years",
   "ROI": "Total return on the investment without adjusting for time. An ROI of 50% means you recover the investment and earn an additional 50%. Easy to communicate to any stakeholder.",
-  "Confidence NPV": "The NPV scaled by your confidence level. If negative, the project may not be investment-ready even under optimistic assumptions — triggers a Requires Financial Strategic Alignment verdict.",
-  "Break-even Confidence": "The minimum confidence factor at which the project still breaks even — i.e. the entitlement shortfall the project can absorb before destroying value. Formula: Initial Investment / PV of all inflows. If 65%, the project survives even if entitlement underdelivers by 35%. The higher your actual confidence factor above this threshold, the more margin of safety you have.",
-  "Downside Discounted Payback": "How many years to recover the investment if entitlement only materialises at your confidence level. If your standard Discounted Payback is 2.2 yrs but the Downside is 3.8 yrs, it means execution risk significantly extends recovery time. A project truly robust to uncertainty should have both paybacks within the GO threshold.",
-  "IRR": "The project's intrinsic annual return rate. If it exceeds your WACC, the project earns more than it costs to fund.",
+  "IRR": "The project's intrinsic annual return rate. If it exceeds the effective WACC, the project earns more than it costs to fund.",
   "Simple Payback": "How many years to recover the investment using undiscounted entitlement. Easier to communicate but less rigorous than Discounted Payback.",
 };
 
@@ -231,17 +236,30 @@ export default function CapExAnalyzer() {
   const [state, setState] = useState(DEFAULT);
   const [yearCFs, setYearCFs] = useState({ y1: DEFAULT.cashflows[0], y2: DEFAULT.cashflows[1], y3: DEFAULT.cashflows[2] });
 
+  const effectiveWACC = useMemo(() => state.wacc + RISK_PREMIUMS[state.riskCategory], [state.wacc, state.riskCategory]);
+
   const parsedCashflows = useMemo(() => (
     [yearCFs.y1, yearCFs.y2, yearCFs.y3].map(v => Math.round(Number(v))).filter(v => !isNaN(v) && v !== 0)
   ), [yearCFs]);
 
   const adjustedCashflows = useMemo(() => {
     const m = state.startMonth;
+    // startMonth=0 → January Y+1: no Y0 entitlement, full Y1/Y2/Y3
+    if (m === 0) {
+      if (parsedCashflows.length === 0) return { y0Ent: 0, y1: 0, y2: 0, y3: 0, y0Months: 0, y3Months: 12 };
+      const annual = parsedCashflows[0];
+      return {
+        y0Ent: 0,
+        y1: annual,
+        y2: parsedCashflows[1] || annual,
+        y3: parsedCashflows[2] || parsedCashflows[1] || annual,
+        y0Months: 0,
+        y3Months: 12,
+      };
+    }
     const y0Months = 12 - m + 1;
     const y3Months = m - 1;
-    if (parsedCashflows.length === 0) {
-      return { y0Ent: 0, y1: 0, y2: 0, y3: 0, y0Months, y3Months };
-    }
+    if (parsedCashflows.length === 0) return { y0Ent: 0, y1: 0, y2: 0, y3: 0, y0Months, y3Months };
     const annual = parsedCashflows[0];
     const y0Ent = Math.round(annual * y0Months / 12);
     const y1    = annual;
@@ -253,33 +271,26 @@ export default function CapExAnalyzer() {
   const allCashflows = useMemo(() => {
     if (parsedCashflows.length === 0) return [-state.initialInvestment];
     const { y0Ent, y1, y2, y3 } = adjustedCashflows;
+    const m = state.startMonth;
+    // January Y+1: no Y0 entitlement, full Y1/Y2/Y3
+    if (m === 0) return [-state.initialInvestment, y1, y2, y3];
+    // January Y0: full Y0 entitlement, no Y3
     const flows = [-state.initialInvestment + y0Ent, y1, y2];
-    if (state.startMonth > 1 && y3 > 0) flows.push(y3);
+    if (m > 1 && y3 > 0) flows.push(y3);
     return flows;
   }, [state.initialInvestment, parsedCashflows, adjustedCashflows, state.startMonth]);
 
   const metrics = useMemo(() => {
     if (parsedCashflows.length === 0) return null;
-    const npv = calcNPV(state.wacc, allCashflows);
-    const irr = calcIRR(allCashflows);
-    const payback = calcPayback(allCashflows);
-    const dPayback = calcDiscountedPayback(allCashflows, state.wacc);
-    // Total inflows = Y0 entitlement + Y1 + Y2 + Y3 (all actual cash received)
+    const npv      = calcNPV(effectiveWACC, allCashflows);
+    const irr      = calcIRR(allCashflows);
+    const payback  = calcPayback(allCashflows);
+    const dPayback = calcDiscountedPayback(allCashflows, effectiveWACC);
     const { y0Ent, y1, y2, y3 } = adjustedCashflows;
-    const totalInflows = y0Ent + y1 + y2 + (state.startMonth > 1 ? y3 : 0);
+    const totalInflows = y0Ent + y1 + y2 + (state.startMonth !== 1 ? y3 : 0);
     const roi = (totalInflows - state.initialInvestment) / state.initialInvestment;
-    // PV of all inflows: Y0 entitlement at t=0 (no discount) + Y1/Y2/Y3 discounted
-    const pv_inflows = y0Ent + allCashflows.slice(1).reduce((acc, cf, t) => acc + cf / Math.pow(1 + state.wacc, t + 1), 0);
-    // Confidence NPV: recalculate NPV applying confidence factor to all inflows
-    const confidenceCFs = allCashflows.map((cf, t) => t === 0
-      ? -state.initialInvestment + (y0Ent * state.confidenceFactor)
-      : cf * state.confidenceFactor
-    );
-    const confidenceNPV = calcNPV(state.wacc, confidenceCFs);
-    const downsideDPayback = calcDiscountedPayback(confidenceCFs, state.wacc);
-    const breakEvenConfidence = pv_inflows > 0 ? state.initialInvestment / pv_inflows : null;
-    return { npv, irr, payback, dPayback, roi, confidenceNPV, downsideDPayback, breakEvenConfidence };
-  }, [allCashflows, state, parsedCashflows, adjustedCashflows]);
+    return { npv, irr, payback, dPayback, roi };
+  }, [allCashflows, effectiveWACC, state, parsedCashflows, adjustedCashflows]);
 
   const verdictKey = useMemo(() => calcVerdict(metrics?.dPayback ?? null), [metrics]);
 
@@ -299,14 +310,18 @@ export default function CapExAnalyzer() {
   }, [parsedCashflows]);
 
   const entitlementChartData = useMemo(() => {
+    const m = state.startMonth;
     const { y0Months, y3Months, y0Ent } = adjustedCashflows;
     let cum = 0, cumDisc = 0;
     return allCashflows.map((cf, t) => {
       cum += cf;
-      cumDisc += cf / Math.pow(1 + state.wacc, t);
+      cumDisc += cf / Math.pow(1 + effectiveWACC, t);
       const isY0 = t === 0;
-      const isY3 = t === allCashflows.length - 1 && state.startMonth > 1 && t >= 3;
-      const label = isY0 ? `Y0 (${y0Months}m)` : isY3 ? `Y3 (${y3Months}m)` : `Y${t}`;
+      const isY3 = t === allCashflows.length - 1 && (m > 1 || m === 0) && t >= 3;
+      const label = isY0
+        ? (m === 0 ? "Y0 (0m)" : `Y0 (${y0Months}m)`)
+        : isY3 && m > 1 ? `Y3 (${y3Months}m)`
+        : `Y${t}`;
       return {
         year: label,
         investment: isY0 ? -state.initialInvestment : null,
@@ -314,14 +329,91 @@ export default function CapExAnalyzer() {
         entitlement: !isY0 ? Math.round(cf) : null,
         cumulative: Math.round(cum),
         discounted: Math.round(cumDisc),
-        isPartialYear: isY0 || isY3,
+        isPartialYear: (isY0 && m !== 0) || (isY3 && m > 1),
       };
     });
-  }, [allCashflows, state.wacc, state.startMonth, state.initialInvestment, adjustedCashflows]);
+  }, [allCashflows, effectiveWACC, state.startMonth, state.initialInvestment, adjustedCashflows]);
 
   const sensitivityData = useMemo(() => (
     WACC_RANGE.map(r => ({ wacc: `${(r * 100).toFixed(0)}%`, npv: Math.round(calcNPV(r, allCashflows)) }))
   ), [allCashflows]);
+
+  const generatePDF = () => {
+    if (!m) return;
+    const rc = RISK_CONFIG[state.riskCategory];
+    const effW = (effectiveWACC * 100).toFixed(1);
+    const monthLabel = state.startMonth === 0 ? "January (Y+1)" : MONTHS[state.startMonth - 1] + " (Y0)";
+    const vCfg = VERDICT_CONFIG[verdictKey];
+    const vColor = verdictKey === "GO" ? "#1a7a4a" : verdictKey === "AMBER_PAYBACK" ? "#a06000" : "#8b1a1a";
+    const vBg    = verdictKey === "GO" ? "#e6f9f0" : verdictKey === "AMBER_PAYBACK" ? "#fff8e6" : "#fde8e8";
+    const date   = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    const row = (label, value, sub) => [
+      "<tr>",
+      "<td style='padding:10px 14px;font-size:13px;color:#555;border-bottom:1px solid #f0f0f0;'>" + label + "</td>",
+      "<td style='padding:10px 14px;font-size:14px;font-weight:700;color:#111;text-align:right;border-bottom:1px solid #f0f0f0;'>" + value + (sub ? "<div style='font-size:10px;font-weight:400;color:#888;margin-top:2px'>" + sub + "</div>" : "") + "</td>",
+      "</tr>"
+    ].join("");
+
+    const irow = (label, value) =>
+      "<div style='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px;'><span style='color:#555'>" + label + "</span><span style='font-weight:700;color:#111'>" + value + "</span></div>";
+
+    const dpbSub = m.dPayback < 2.5 ? "Within GO threshold" : m.dPayback <= 3 ? "Requires alignment" : "Exceeds 3yr threshold";
+    const y3Label = "Y3 (" + adjustedCashflows.y3Months + "m)";
+    const y0Label = "Y0 (" + adjustedCashflows.y0Months + "m)";
+
+    const html = [
+      "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>CapEx Analysis</title>",
+      "<style>body{font-family:Arial,sans-serif;margin:0;padding:40px;color:#111;background:#fff}",
+      "@media print{body{padding:20px}}",
+      "h1{font-size:22px;margin:0 0 4px;color:#111}.subtitle{font-size:11px;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-bottom:24px}",
+      ".verdict{display:inline-block;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:700;letter-spacing:.06em;margin-bottom:8px}",
+      ".st{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#888;margin:20px 0 8px;font-weight:700}",
+      "table{width:100%;border-collapse:collapse;background:#fafafa;border-radius:8px;overflow:hidden;margin-bottom:16px}",
+      ".grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}",
+      ".box{background:#fafafa;border-radius:8px;padding:12px 14px}",
+      ".footer{margin-top:40px;font-size:10px;color:#aaa;border-top:1px solid #eee;padding-top:12px;display:flex;justify-content:space-between}",
+      "</style></head><body>",
+      "<div style='display:flex;align-items:center;gap:12px;margin-bottom:6px'>",
+      "<img src='https://i.imgur.com/vS9wbFB.png' width='36' height='36' style='border-radius:6px'>",
+      "<div><h1>CapEx Financial Analyzer</h1><div class='subtitle'>Investment Decision Framework · Amazon Internal</div></div></div>",
+      "<div class='verdict' style='background:" + vBg + ";color:" + vColor + ";border:1.5px solid " + vColor + "40'>" + vCfg.label + "</div>",
+      "<div style='font-size:12px;color:#555;margin-bottom:24px'>" + vCfg.desc + "</div>",
+      "<div class='grid'>",
+      "<div><div class='st'>Project Parameters</div><div class='box'>",
+      irow("Initial Investment", fmt(state.initialInvestment)),
+      irow("Base WACC", (state.wacc * 100).toFixed(1) + "%"),
+      irow("Risk Category", rc.label + " (" + rc.premium + ")"),
+      irow("Effective WACC", effW + "%"),
+      irow("Start Month", monthLabel),
+      irow("Y1 Entitlement", fmt(yearCFs.y1) + "/yr"),
+      irow("Y2 Entitlement", fmt(yearCFs.y2) + "/yr"),
+      irow("Y3 Entitlement", fmt(yearCFs.y3) + "/yr"),
+      "</div></div>",
+      "<div><div class='st'>Adjusted 3YF Window</div><div class='box'>",
+      irow(y0Label, adjustedCashflows.y0Ent > 0 ? fmt(adjustedCashflows.y0Ent) : "—"),
+      irow("Y1 (12m)", fmt(adjustedCashflows.y1)),
+      irow("Y2 (12m)", fmt(adjustedCashflows.y2)),
+      irow(y3Label, adjustedCashflows.y3 > 0 ? fmt(adjustedCashflows.y3) : "—"),
+      "</div></div></div>",
+      "<div class='st'>Core Metrics</div><table>",
+      row("NPV", fmt(m.npv), m.npv > 0 ? "Positive — value created" : "Negative — destroys value"),
+      row("Discounted Payback", fmtPayback(m.dPayback), dpbSub),
+      row("ROI", (m.roi * 100).toFixed(1) + "%", "Total return on investment"),
+      "</table>",
+      "<div class='st'>Secondary Metrics</div><table>",
+      row("IRR", m.irr !== null ? fmtPct(m.irr) : "N/A", "vs effective WACC " + effW + "%"),
+      row("Simple Payback", fmtPayback(m.payback), "Undiscounted recovery"),
+      "</table>",
+      "<div class='footer'><span>Amazon AMET · CapEx Financial Analyzer</span><span>Generated " + date + "</span></div>",
+      "<script>window.onload=function(){window.print();}<\/script>",
+      "</body></html>"
+    ].join("");
+
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+  };
 
   const reset = () => { setState(DEFAULT); setYearCFs({ y1: DEFAULT.cashflows[0], y2: DEFAULT.cashflows[1], y3: DEFAULT.cashflows[2] }); };
   const update = useCallback((key) => (val) => setState(s => ({ ...s, [key]: val })), []);
@@ -359,6 +451,12 @@ export default function CapExAnalyzer() {
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <div style={{ padding: "6px 16px", borderRadius: 4, background: cfg.bg, border: `1px solid ${cfg.border}`, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: cfg.color, maxWidth: 320, textAlign: "center", fontFamily: "'Space Mono',monospace" }}>{cfg.label}</div>
+            <button onClick={generatePDF}
+              style={{ padding: "6px 16px", borderRadius: 4, background: "rgba(0,150,255,0.08)", border: "1px solid rgba(0,150,255,0.25)", color: "#0096ff", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono',monospace", letterSpacing: "0.06em", fontWeight: 700 }}
+              onMouseEnter={e => { e.target.style.background = "rgba(0,150,255,0.15)"; }}
+              onMouseLeave={e => { e.target.style.background = "rgba(0,150,255,0.08)"; }}>
+              ↓ PDF
+            </button>
             <button onClick={reset}
               style={{ padding: "6px 16px", borderRadius: 4, background: "rgba(255,153,0,0.08)", border: "1px solid rgba(255,153,0,0.25)", color: "#FF9900", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono',monospace", letterSpacing: "0.06em", fontWeight: 700 }}
               onMouseEnter={e => { e.target.style.background = "rgba(255,153,0,0.15)"; }}
@@ -382,30 +480,46 @@ export default function CapExAnalyzer() {
 
               <InputField label="Initial Investment" value={state.initialInvestment} onChange={update("initialInvestment")} />
               <InputField label="WACC" value={state.wacc} onChange={update("wacc")} isRate integerRate />
-              <InputField label="Confidence Factor" value={state.confidenceFactor} onChange={v => setState(s => ({ ...s, confidenceFactor: Math.min(1, Math.max(0, v)) }))} isRate integerRate />
-              {/* Confidence Level Indicator */}
-              {(() => {
-                const pct = Math.round(state.confidenceFactor * 100);
-                const level = pct >= 90 ? { label: "VERY HIGH", color: "#00e5a0", desc: "Board-level standard · Contractually committed" }
-                  : pct >= 80 ? { label: "HIGH", color: "#00e5a0", desc: "Acceptable for internal CapEx approval" }
-                  : pct >= 70 ? { label: "MEDIUM", color: "#ffd166", desc: "Requires sensitivity analysis & mitigation plan" }
-                  : { label: "LOW — SPECULATIVE", color: "#ff4d6d", desc: "Business case should not proceed without de-risking" };
-                const filled = Math.round(pct / 10);
-                return (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: -6, padding: "10px 12px", background: `${level.color}08`, border: `1px solid ${level.color}25`, borderRadius: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: level.color, fontFamily: "'Space Mono',monospace", letterSpacing: "0.06em" }}>{level.label}</span>
-                      <span style={{ fontSize: 11, color: level.color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>{pct}%</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 3 }}>
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < filled ? level.color : "rgba(255,255,255,0.08)", transition: "background 0.2s" }} />
-                      ))}
-                    </div>
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "'Space Mono',monospace", lineHeight: 1.4 }}>{level.desc}</span>
-                  </div>
-                );
-              })()}
+
+              {/* Risk Category Selector */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <label style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>Project Risk Category</label>
+                  <span style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", color: RISK_CONFIG[state.riskCategory].color, fontWeight: 700 }}>
+                    Effective WACC: {((state.wacc + RISK_PREMIUMS[state.riskCategory]) * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  {["low", "medium", "high"].map(cat => {
+                    const cfg = RISK_CONFIG[cat];
+                    const isSelected = state.riskCategory === cat;
+                    return (
+                      <div key={cat} onClick={() => setState(s => ({ ...s, riskCategory: cat }))}
+                        style={{ cursor: "pointer", borderRadius: 10, padding: "10px 10px", border: `1.5px solid ${isSelected ? cfg.color : "rgba(255,255,255,0.08)"}`, background: isSelected ? cfg.bg : "rgba(255,255,255,0.02)", transition: "all 0.15s" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
+                          <div style={{ width: 7, height: 7, borderRadius: "50%", background: cfg.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, fontWeight: 700, color: isSelected ? cfg.color : "rgba(255,255,255,0.6)", fontFamily: "'Space Mono',monospace" }}>{cfg.label}</span>
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: cfg.color, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>{cfg.premium}</div>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", lineHeight: 1.4 }}>{cfg.desc}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: `${RISK_CONFIG[state.riskCategory].color}10`, border: `1px solid ${RISK_CONFIG[state.riskCategory].color}30`, borderRadius: 8 }}>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "'Space Mono',monospace" }}>
+                    {((state.wacc) * 100).toFixed(1)}% base WACC
+                  </span>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>+</span>
+                  <span style={{ fontSize: 10, color: RISK_CONFIG[state.riskCategory].color, fontFamily: "'Space Mono',monospace" }}>
+                    {(RISK_PREMIUMS[state.riskCategory] * 100).toFixed(1)}% risk premium
+                  </span>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>=</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: RISK_CONFIG[state.riskCategory].color, fontFamily: "'Space Mono',monospace" }}>
+                    {((state.wacc + RISK_PREMIUMS[state.riskCategory]) * 100).toFixed(1)}% effective WACC
+                  </span>
+                </div>
+              </div>
 
               {/* 3YF Entitlement */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -428,28 +542,54 @@ export default function CapExAnalyzer() {
                 </div>
 
                 {/* Start Month Selector */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "rgba(255,153,0,0.05)", border: "1px solid rgba(255,153,0,0.2)", borderRadius: 8, padding: "10px 12px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <label style={{ fontSize: 10, color: "#FF9900", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>Entitlement Start Month (Y0)</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, background: "rgba(255,153,0,0.05)", border: "1px solid rgba(255,153,0,0.2)", borderRadius: 8, padding: "10px 12px" }}>
+                  <label style={{ fontSize: 10, color: "#FF9900", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>Entitlement Start Month</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
+                    {[
+                      ...["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((mo, i) => ({ label: mo, tag: "Y0", val: i + 1 })),
+                      { label: "Jan", tag: "Y+1", val: 0 },
+                    ].map(({ label, tag, val }) => {
+                      const isSelected = state.startMonth === val;
+                      const isY1 = val === 0;
+                      const selColor = isY1 ? "#ff4d6d" : "#FF9900";
+                      const selBg    = isY1 ? "rgba(255,77,109,0.12)" : "rgba(255,153,0,0.12)";
+                      const selBorder= isY1 ? "rgba(255,77,109,0.6)" : "rgba(255,153,0,0.6)";
+                      return (
+                        <div key={val} onClick={() => setState(s => ({ ...s, startMonth: val }))}
+                          style={{ cursor: "pointer", borderRadius: 7, padding: "6px 4px", textAlign: "center", border: `1px solid ${isSelected ? selBorder : "rgba(255,255,255,0.08)"}`, background: isSelected ? selBg : "rgba(255,255,255,0.02)", transition: "all 0.12s" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? selColor : "rgba(255,255,255,0.6)", fontFamily: "'Space Mono',monospace" }}>{label}</div>
+                          <div style={{ fontSize: 9, color: isSelected ? selColor : "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", opacity: isSelected ? 0.8 : 1 }}>{tag}</div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <select value={state.startMonth}
-                    onChange={e => setState(s => ({ ...s, startMonth: parseInt(e.target.value) }))}
-                    style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,153,0,0.3)", borderRadius: 7, padding: "8px 10px", color: "#e8eaf6", fontSize: 12, fontFamily: "'Space Mono',monospace", outline: "none", cursor: "pointer" }}>
-                    {MONTHS.map((mo, i) => <option key={i} value={i + 1} style={{ background: "#0d1520" }}>{mo}</option>)}
-                  </select>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>
-                    Entitlement starts materialising in Y0. The 3YF window ends on the same month in Y3.
-                  </span>
+                  <div style={{ padding: "6px 10px", borderRadius: 6, background: state.startMonth === 0 ? "rgba(255,77,109,0.06)" : "rgba(255,153,0,0.06)", border: `1px solid ${state.startMonth === 0 ? "rgba(255,77,109,0.2)" : "rgba(255,153,0,0.2)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono',monospace" }}>
+                      {state.startMonth === 0
+                        ? "No Y0 entitlement — full 3YF runs Y1 → Y3"
+                        : state.startMonth === 1
+                        ? "Full Y0 entitlement — 3YF ends Dec Y2"
+                        : `Y0: ${12 - state.startMonth + 1}m · Y1: 12m · Y2: 12m · Y3: ${state.startMonth - 1}m = 36m`}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: state.startMonth === 0 ? "#ff4d6d" : "#FF9900", fontFamily: "'Space Mono',monospace", flexShrink: 0, marginLeft: 8 }}>
+                      {state.startMonth === 0 ? "0m in Y0" : `${12 - state.startMonth + 1}m in Y0`}
+                    </span>
+                  </div>
                   {parsedCashflows.length > 0 && (
-                    <div style={{ display: "grid", gridTemplateColumns: state.startMonth === 1 ? "1fr 1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 6, marginTop: 2 }}>
-                      {(state.startMonth === 1 ? [
-                        { label: `Y0 (12m)`, value: fmt(adjustedCashflows.y0Ent || 0, 0), color: "rgba(0,229,160,0.7)" },
-                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0), color: "#e8eaf6" },
-                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0), color: "#e8eaf6" },
+                    <div style={{ display: "grid", gridTemplateColumns: state.startMonth === 0 ? "1fr 1fr 1fr 1fr" : state.startMonth === 1 ? "1fr 1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 6, marginTop: 2 }}>
+                      {(state.startMonth === 0 ? [
+                        { label: "Y0 (0m)",  value: "—",                                              color: "rgba(255,255,255,0.25)" },
+                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "#e8eaf6" },
+                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "#e8eaf6" },
+                        { label: "Y3 (12m)", value: fmt(adjustedCashflows.y3 || 0, 0),                color: "#e8eaf6" },
+                      ] : state.startMonth === 1 ? [
+                        { label: "Y0 (12m)", value: fmt(adjustedCashflows.y0Ent || 0, 0),             color: "rgba(0,229,160,0.7)" },
+                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "#e8eaf6" },
+                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "#e8eaf6" },
                       ] : [
                         { label: `Y0 (${adjustedCashflows.y0Months}m)`, value: fmt(adjustedCashflows.y0Ent || 0, 0), color: "rgba(0,229,160,0.7)" },
-                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0), color: "#e8eaf6" },
-                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0), color: "#e8eaf6" },
+                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "#e8eaf6" },
+                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "#e8eaf6" },
                         { label: `Y3 (${adjustedCashflows.y3Months}m)`, value: fmt(adjustedCashflows.y3 || 0, 0), color: "rgba(0,229,160,0.7)" },
                       ]).map(({ label, value, color }) => (
                         <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "center" }}>
@@ -522,29 +662,8 @@ export default function CapExAnalyzer() {
 
                   <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Secondary Metrics</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
-                    <MetricCard label="IRR" value={fmtPct(m.irr)} sub={`vs WACC ${fmtPct(state.wacc)}`} verdictKey={m.irr !== null && m.irr > state.wacc ? "GO" : "NO-GO"} />
+                    <MetricCard label="IRR" value={m.irr !== null ? fmtPct(m.irr) : "N/A"} sub={`vs effective WACC ${fmtPct(effectiveWACC)}`} verdictKey={m.irr !== null && m.irr > effectiveWACC ? "GO" : "NO-GO"} />
                     <MetricCard label="Simple Payback" value={fmtPayback(m.payback)} sub={m.payback === null ? "Not recovered within 3 yrs" : "Undiscounted recovery"} verdictKey={m.payback !== null && m.payback < 2.5 ? "GO" : m.payback !== null && m.payback <= 3 ? "AMBER_PAYBACK" : "NO-GO"} />
-                  </div>
-
-                  <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Risk Metrics</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
-                    <MetricCard label="Confidence NPV" value={fmt(m.confidenceNPV)} sub={`@ ${fmtPct(state.confidenceFactor)} confidence`} verdictKey={m.confidenceNPV > 0 ? "GO" : "NO-GO"} />
-                    <MetricCard
-                      label="Break-even Confidence"
-                      value={m.breakEvenConfidence !== null ? fmtPct(m.breakEvenConfidence) : "N/A"}
-                      sub={m.breakEvenConfidence !== null
-                        ? state.confidenceFactor > m.breakEvenConfidence
-                          ? `${fmtPct(state.confidenceFactor - m.breakEvenConfidence)} safety margin`
-                          : "Confidence below break-even"
-                        : ""}
-                      verdictKey={m.breakEvenConfidence !== null && state.confidenceFactor > m.breakEvenConfidence ? "GO" : "NO-GO"}
-                    />
-                    <MetricCard
-                      label="Downside Discounted Payback"
-                      value={fmtPayback(m.downsideDPayback)}
-                      sub={`@ ${fmtPct(state.confidenceFactor)} confidence · pessimistic recovery`}
-                      verdictKey={m.downsideDPayback !== null && m.downsideDPayback < 2.5 ? "GO" : m.downsideDPayback !== null && m.downsideDPayback <= 3 ? "AMBER_PAYBACK" : "NO-GO"}
-                    />
                   </div>
                 </>
               ) : (
@@ -618,7 +737,7 @@ export default function CapExAnalyzer() {
                 <div style={{ fontSize: 13, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>NPV Sensitivity vs WACC</div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
                   Green = profitable · Red = value destroying · Yellow = your WACC
-                  {m?.irr != null && <span style={{ color: m.irr > state.wacc ? "#00e5a0" : "#ff4d6d", marginLeft: 6, fontWeight: 700 }}>· IRR = {fmtPct(m.irr)}{m.irr < state.wacc ? " ✗ Below WACC" : ""}</span>}
+                  {m?.irr != null && <span style={{ color: m.irr > effectiveWACC ? "#00e5a0" : "#ff4d6d", marginLeft: 6, fontWeight: 700 }}>· IRR = {fmtPct(m.irr)}{m.irr < effectiveWACC ? " ✗ Below effective WACC" : ""}</span>}
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={260}>
@@ -633,7 +752,7 @@ export default function CapExAnalyzer() {
                     formatter={v => [<span style={{ color: v >= 0 ? "#00e5a0" : "#ff4d6d" }}>{fmt(v)}</span>, v >= 0 ? "NPV ✓ Profitable" : "NPV ✗ Unprofitable"]}
                   />
                   <ReferenceLine y={0} stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} label={{ value: "NPV=0", fill: "rgba(255,255,255,0.3)", fontSize: 9, position: "insideTopRight" }} />
-                  <ReferenceLine x={`${(state.wacc * 100).toFixed(0)}%`} stroke="#ffd166" strokeDasharray="5 4" strokeWidth={2} label={{ value: `Your WACC ${fmtPct(state.wacc)}`, fill: "#ffd166", fontSize: 9, position: "insideTopLeft" }} />
+                  <ReferenceLine x={`${(effectiveWACC * 100).toFixed(0)}%`} stroke="#ffd166" strokeDasharray="5 4" strokeWidth={2} label={{ value: `Eff. WACC ${fmtPct(effectiveWACC)}`, fill: "#ffd166", fontSize: 9, position: "insideTopLeft" }} />
                   <Line type="monotone" dataKey="npv" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#00e5a0" }} stroke="#00e5a0" />
                 </LineChart>
               </ResponsiveContainer>
