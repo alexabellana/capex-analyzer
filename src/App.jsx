@@ -340,72 +340,138 @@ export default function CapExAnalyzer() {
 
   const generatePDF = () => {
     if (!m) return;
-    const rc = RISK_CONFIG[state.riskCategory];
-    const effW = (effectiveWACC * 100).toFixed(1);
-    const monthLabel = state.startMonth === 0 ? "January (Y+1)" : MONTHS[state.startMonth - 1] + " (Y0)";
-    const vCfg = VERDICT_CONFIG[verdictKey];
-    const vColor = verdictKey === "GO" ? "#1a7a4a" : verdictKey === "AMBER_PAYBACK" ? "#a06000" : "#8b1a1a";
-    const vBg    = verdictKey === "GO" ? "#e6f9f0" : verdictKey === "AMBER_PAYBACK" ? "#fff8e6" : "#fde8e8";
-    const date   = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const rc    = RISK_CONFIG[state.riskCategory];
+    const effW  = (effectiveWACC * 100).toFixed(1);
+    const mL    = state.startMonth === 0 ? "January (Y+1)" : MONTHS[state.startMonth - 1] + " (Y0)";
+    const vCfg  = VERDICT_CONFIG[verdictKey];
+    const date  = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-    const row = (label, value, sub) => [
-      "<tr>",
-      "<td style='padding:10px 14px;font-size:13px;color:#555;border-bottom:1px solid #f0f0f0;'>" + label + "</td>",
-      "<td style='padding:10px 14px;font-size:14px;font-weight:700;color:#111;text-align:right;border-bottom:1px solid #f0f0f0;'>" + value + (sub ? "<div style='font-size:10px;font-weight:400;color:#888;margin-top:2px'>" + sub + "</div>" : "") + "</td>",
-      "</tr>"
+    const vColor  = verdictKey === "GO" ? "#0f6e56" : verdictKey === "AMBER_PAYBACK" ? "#854f0b" : "#8b1a1a";
+    const vBg     = verdictKey === "GO" ? "#e1f5ee" : verdictKey === "AMBER_PAYBACK" ? "#faeeda" : "#fcebeb";
+    const vBorder = verdictKey === "GO" ? "#1d9e75" : verdictKey === "AMBER_PAYBACK" ? "#ba7517" : "#e24b4a";
+    const rcColor = state.riskCategory === "low" ? "#0f6e56" : state.riskCategory === "medium" ? "#854f0b" : "#8b1a1a";
+    const rcBg    = state.riskCategory === "low" ? "#e1f5ee" : state.riskCategory === "medium" ? "#faeeda" : "#fcebeb";
+
+    const dpbOk  = m.dPayback !== null && m.dPayback < 2.5;
+    const dpbAmb = m.dPayback !== null && m.dPayback >= 2.5 && m.dPayback <= 3;
+    const dpbCol = dpbOk ? "#0f6e56" : dpbAmb ? "#854f0b" : "#8b1a1a";
+    const dpbBg  = dpbOk ? "#e1f5ee" : dpbAmb ? "#faeeda" : "#fcebeb";
+    const npvCol = m.npv > 0 ? "#0f6e56" : "#8b1a1a";
+    const npvBg  = m.npv > 0 ? "#e1f5ee" : "#fcebeb";
+    const irrCol = m.irr !== null && m.irr > effectiveWACC ? "#0f6e56" : "#8b1a1a";
+
+    const metricCard = (label, value, sub, col, bg) => [
+      "<div style='background:" + (bg||"#f8f8f8") + ";border-radius:10px;padding:16px 18px;border:1px solid " + (col ? col+"30" : "#eee") + ";'>",
+      "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:600'>" + label + "</div>",
+      "<div style='font-size:24px;font-weight:700;color:" + (col||"#111") + ";margin-bottom:4px'>" + value + "</div>",
+      sub ? "<div style='font-size:11px;color:#888'>" + sub + "</div>" : "",
+      "</div>"
     ].join("");
 
-    const irow = (label, value) =>
-      "<div style='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px;'><span style='color:#555'>" + label + "</span><span style='font-weight:700;color:#111'>" + value + "</span></div>";
+    const irow = (label, value, bold) =>
+      "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;'>" +
+      "<span style='font-size:12px;color:#666'>" + label + "</span>" +
+      "<span style='font-size:13px;font-weight:" + (bold?"700":"600") + ";color:#111'>" + value + "</span></div>";
 
-    const dpbSub = m.dPayback < 2.5 ? "Within GO threshold" : m.dPayback <= 3 ? "Requires alignment" : "Exceeds 3yr threshold";
-    const y3Label = "Y3 (" + adjustedCashflows.y3Months + "m)";
-    const y0Label = "Y0 (" + adjustedCashflows.y0Months + "m)";
+    const windowRow = (label, value, highlight) =>
+      "<div style='text-align:center;background:" + (highlight?"#f0faf5":"#f8f8f8") + ";border-radius:8px;padding:10px 6px;border:1px solid " + (highlight?"#1d9e7530":"#eee") + ";'>" +
+      "<div style='font-size:10px;color:#888;margin-bottom:4px'>" + label + "</div>" +
+      "<div style='font-size:15px;font-weight:700;color:" + (highlight?"#0f6e56":"#111") + "'>" + value + "</div></div>";
+
+    const y0h = adjustedCashflows.y0Ent > 0;
+    const y3h = adjustedCashflows.y3 > 0;
+    const y0v = y0h ? fmt(adjustedCashflows.y0Ent) : "—";
+    const y3v = y3h ? fmt(adjustedCashflows.y3) : "—";
+    const y0cols = state.startMonth === 0 ? 4 : state.startMonth === 1 ? 3 : 4;
 
     const html = [
-      "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>CapEx Analysis</title>",
-      "<style>body{font-family:Arial,sans-serif;margin:0;padding:40px;color:#111;background:#fff}",
-      "@media print{body{padding:20px}}",
-      "h1{font-size:22px;margin:0 0 4px;color:#111}.subtitle{font-size:11px;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-bottom:24px}",
-      ".verdict{display:inline-block;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:700;letter-spacing:.06em;margin-bottom:8px}",
-      ".st{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#888;margin:20px 0 8px;font-weight:700}",
-      "table{width:100%;border-collapse:collapse;background:#fafafa;border-radius:8px;overflow:hidden;margin-bottom:16px}",
-      ".grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}",
-      ".box{background:#fafafa;border-radius:8px;padding:12px 14px}",
-      ".footer{margin-top:40px;font-size:10px;color:#aaa;border-top:1px solid #eee;padding-top:12px;display:flex;justify-content:space-between}",
+      "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>CapEx Analysis — Amazon AMET</title>",
+      "<style>",
+      "*{box-sizing:border-box;margin:0;padding:0}",
+      "body{font-family:Arial,sans-serif;background:#fff;color:#111;padding:36px 40px;max-width:900px;margin:0 auto}",
+      "@media print{body{padding:20px 24px}@page{margin:1.5cm}}",
+      ".grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}",
+      ".grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}",
+      ".grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}",
+      ".section{margin-top:22px}",
+      ".section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#aaa;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f0f0f0}",
+      ".box{background:#f8f8f8;border-radius:10px;padding:14px 16px;border:1px solid #eee}",
+      ".tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.04em}",
+      ".footer{margin-top:32px;padding-top:12px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#bbb}",
       "</style></head><body>",
-      "<div style='display:flex;align-items:center;gap:12px;margin-bottom:6px'>",
-      "<img src='https://i.imgur.com/vS9wbFB.png' width='36' height='36' style='border-radius:6px'>",
-      "<div><h1>CapEx Financial Analyzer</h1><div class='subtitle'>Investment Decision Framework · Amazon Internal</div></div></div>",
-      "<div class='verdict' style='background:" + vBg + ";color:" + vColor + ";border:1.5px solid " + vColor + "40'>" + vCfg.label + "</div>",
-      "<div style='font-size:12px;color:#555;margin-bottom:24px'>" + vCfg.desc + "</div>",
-      "<div class='grid'>",
-      "<div><div class='st'>Project Parameters</div><div class='box'>",
-      irow("Initial Investment", fmt(state.initialInvestment)),
-      irow("Base WACC", (state.wacc * 100).toFixed(1) + "%"),
-      irow("Risk Category", rc.label + " (" + rc.premium + ")"),
-      irow("Effective WACC", effW + "%"),
-      irow("Start Month", monthLabel),
-      irow("Y1 Entitlement", fmt(yearCFs.y1) + "/yr"),
-      irow("Y2 Entitlement", fmt(yearCFs.y2) + "/yr"),
-      irow("Y3 Entitlement", fmt(yearCFs.y3) + "/yr"),
+
+      // HEADER
+      "<div style='display:flex;align-items:center;justify-content:space-between;padding-bottom:18px;border-bottom:2px solid #FF9900;margin-bottom:20px'>",
+      "<div style='display:flex;align-items:center;gap:12px'>",
+      "<img src='https://i.imgur.com/vS9wbFB.png' width='40' height='40' style='border-radius:8px'>",
+      "<div><div style='font-size:20px;font-weight:700;color:#111'>CapEx Financial Analyzer</div>",
+      "<div style='font-size:10px;color:#aaa;letter-spacing:.12em;text-transform:uppercase;margin-top:2px'>Investment Decision Framework · Amazon AMET · Internal</div></div></div>",
+      "<div style='text-align:right'><div style='font-size:10px;color:#aaa'>Generated</div><div style='font-size:13px;font-weight:700;color:#111'>" + date + "</div></div>",
+      "</div>",
+
+      // VERDICT BANNER
+      "<div style='background:" + vBg + ";border:2px solid " + vBorder + ";border-radius:12px;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px'>",
+      "<div style='display:flex;align-items:center;gap:14px'>",
+      "<div style='width:48px;height:48px;border-radius:50%;background:" + vBorder + "20;border:2px solid " + vBorder + ";display:flex;align-items:center;justify-content:center;font-size:20px;color:" + vColor + "'>" + vCfg.icon + "</div>",
+      "<div><div style='font-size:20px;font-weight:700;color:" + vColor + ";letter-spacing:.04em'>" + vCfg.label + "</div>",
+      "<div style='font-size:12px;color:#666;margin-top:3px'>" + vCfg.desc + "</div></div></div>",
+      "<div style='display:flex;flex-direction:column;gap:8px;min-width:220px'>",
+      "<div style='display:flex;align-items:center;gap:8px;background:white;border-radius:6px;padding:6px 12px;border:1px solid " + (dpbOk?"#1d9e7540":"#e24b4a40") + "'>",
+      "<span style='font-size:14px;color:" + (dpbOk?"#1d9e75":"#e24b4a") + "'>" + (dpbOk?"✓":"✗") + "</span>",
+      "<span style='font-size:11px;font-weight:600;color:" + (dpbOk?"#0f6e56":"#8b1a1a") + "'>Discounted Payback &lt; 2.5 yrs</span></div>",
+      "<div style='display:flex;align-items:center;gap:8px;background:white;border-radius:6px;padding:6px 12px;border:1px solid " + (m.npv>0?"#1d9e7540":"#e24b4a40") + "'>",
+      "<span style='font-size:14px;color:" + (m.npv>0?"#1d9e75":"#e24b4a") + "'>" + (m.npv>0?"✓":"✗") + "</span>",
+      "<span style='font-size:11px;font-weight:600;color:" + (m.npv>0?"#0f6e56":"#8b1a1a") + "'>NPV &gt; 0</span></div>",
       "</div></div>",
-      "<div><div class='st'>Adjusted 3YF Window</div><div class='box'>",
-      irow(y0Label, adjustedCashflows.y0Ent > 0 ? fmt(adjustedCashflows.y0Ent) : "—"),
-      irow("Y1 (12m)", fmt(adjustedCashflows.y1)),
-      irow("Y2 (12m)", fmt(adjustedCashflows.y2)),
-      irow(y3Label, adjustedCashflows.y3 > 0 ? fmt(adjustedCashflows.y3) : "—"),
+
+      // CORE METRICS
+      "<div class='section'><div class='section-title'>Core Metrics</div>",
+      "<div class='grid3'>",
+      metricCard("NPV", fmt(m.npv), m.npv > 0 ? "Positive — value created" : "Negative — destroys value", npvCol, npvBg),
+      metricCard("Discounted Payback", fmtPayback(m.dPayback), dpbOk ? "Within GO threshold" : dpbAmb ? "Requires alignment" : "Exceeds 3yr threshold", dpbCol, dpbBg),
+      metricCard("ROI", (m.roi*100).toFixed(1)+"%", "Total return on investment", m.roi > 0 ? "#0f6e56" : "#8b1a1a", m.roi > 0 ? "#e1f5ee" : "#fcebeb"),
+      "</div></div>",
+
+      // SECONDARY METRICS
+      "<div class='section'><div class='section-title'>Secondary Metrics</div>",
+      "<div class='grid2'>",
+      metricCard("IRR", m.irr !== null ? fmtPct(m.irr) : "N/A", "vs effective WACC " + effW + "%", irrCol, null),
+      metricCard("Simple Payback", fmtPayback(m.payback), "Undiscounted recovery", "#555", null),
+      "</div></div>",
+
+      // PARAMETERS + 3YF WINDOW
+      "<div class='section'><div class='section-title'>Project Parameters</div>",
+      "<div class='grid2'>",
+      "<div class='box'>",
+      irow("Initial Investment", fmt(state.initialInvestment), true),
+      irow("Base WACC", (state.wacc*100).toFixed(1)+"%", false),
+      irow("Risk Category", "<span class='tag' style='background:" + rcBg + ";color:" + rcColor + "'>" + rc.label + " " + rc.premium + "</span>", false),
+      irow("Effective WACC", "<strong style='color:#FF9900'>" + effW + "%</strong>", false),
+      irow("Entitlement Start", mL, false),
+      "</div>",
+      "<div class='box'>",
+      irow("Y1 Annual Entitlement", fmt(yearCFs.y1) + "/yr", true),
+      irow("Y2 Annual Entitlement", fmt(yearCFs.y2) + "/yr", false),
+      irow("Y3 Annual Entitlement", fmt(yearCFs.y3) + "/yr", false),
       "</div></div></div>",
-      "<div class='st'>Core Metrics</div><table>",
-      row("NPV", fmt(m.npv), m.npv > 0 ? "Positive — value created" : "Negative — destroys value"),
-      row("Discounted Payback", fmtPayback(m.dPayback), dpbSub),
-      row("ROI", (m.roi * 100).toFixed(1) + "%", "Total return on investment"),
-      "</table>",
-      "<div class='st'>Secondary Metrics</div><table>",
-      row("IRR", m.irr !== null ? fmtPct(m.irr) : "N/A", "vs effective WACC " + effW + "%"),
-      row("Simple Payback", fmtPayback(m.payback), "Undiscounted recovery"),
-      "</table>",
-      "<div class='footer'><span>Amazon AMET · CapEx Financial Analyzer</span><span>Generated " + date + "</span></div>",
+
+      // 3YF WINDOW
+      "<div class='section'><div class='section-title'>Adjusted 3YF Window (36 months)</div>",
+      "<div class='" + (y0cols === 3 ? "grid3" : "grid4") + "'>",
+      state.startMonth === 0
+        ? windowRow("Y0 (0m)", "—", false)
+        : windowRow("Y0 (" + adjustedCashflows.y0Months + "m)", y0v, y0h),
+      windowRow("Y1 (12m)", fmt(adjustedCashflows.y1), false),
+      windowRow("Y2 (12m)", fmt(adjustedCashflows.y2), false),
+      state.startMonth === 1 ? "" : windowRow("Y3 (" + adjustedCashflows.y3Months + "m)", y3v, y3h),
+      "</div></div>",
+
+      // FOOTER
+      "<div class='footer'>",
+      "<span>Amazon AMET · CapEx Financial Analyzer · For decision support only</span>",
+      "<span>Effective WACC: " + effW + "% · Risk: " + rc.label + " · Start: " + mL + "</span>",
+      "</div>",
+
       "<script>window.onload=function(){window.print();}<\/script>",
       "</body></html>"
     ].join("");
