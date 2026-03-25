@@ -665,115 +665,99 @@ export default function CapExAnalyzer() {
                     <MetricCard label="IRR" value={m.irr !== null ? fmtPct(m.irr) : "N/A"} sub={`vs effective WACC ${fmtPct(effectiveWACC)}`} verdictKey={m.irr !== null && m.irr > effectiveWACC ? "GO" : "NO-GO"} />
                     <MetricCard label="Simple Payback" value={fmtPayback(m.payback)} sub={m.payback === null ? "Not recovered within 3 yrs" : "Undiscounted recovery"} verdictKey={m.payback !== null && m.payback < 2.5 ? "GO" : m.payback !== null && m.payback <= 3 ? "AMBER_PAYBACK" : "NO-GO"} />
                   </div>
+
+                  {/* Dashboard — charts inline */}
+                  <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Dashboard</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+
+                    {/* Chart 1 */}
+                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 16px 10px" }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Annual Entitlement + Cumulative</div>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>Y0 = CapEx · Y1–Y3 = entitlement · Line = cumulative</div>
+                      </div>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <ComposedChart data={entitlementChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barCategoryGap="20%">
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                          <XAxis dataKey="year" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 8, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={54} />
+                          <Tooltip contentStyle={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 10 }} labelStyle={{ color: "rgba(255,255,255,0.7)", marginBottom: 4, fontWeight: 700 }} itemStyle={{ color: "rgba(255,255,255,0.55)" }}
+                            formatter={(v, n) => {
+                              if (n === "investment") return [<span style={{ color: "#ff4d6d" }}>{fmt(v)}</span>, "CapEx (Y0)"];
+                              if (n === "entitlement") return [<span style={{ color: "#00e5a0" }}>{fmt(v)}</span>, "Annual Entitlement"];
+                              if (n === "cumulative") return [<span style={{ color: "#00e5a0" }}>{fmt(v)}</span>, "Cumulative"];
+                              if (n === "discounted") return [<span style={{ color: "#0096ff" }}>{fmt(v)}</span>, "Disc. Cumulative"];
+                              return [fmt(v), n];
+                            }} />
+                          <ReferenceLine y={0} stroke="rgba(255,255,255,0.25)" strokeWidth={1.5} />
+                          <Bar dataKey="investment" stackId="main" fill="rgba(255,77,109,0.6)" radius={[0,0,4,4]} />
+                          <Bar dataKey="partial" stackId="main" fill="rgba(0,229,160,0.35)" radius={[4,4,0,0]} />
+                          <Bar dataKey="entitlement" stackId="main" radius={[4,4,0,0]}>
+                            {entitlementChartData.map((entry, i) => (
+                              <Cell key={i} fill={entry.isPartialYear ? "rgba(0,229,160,0.35)" : "rgba(0,229,160,0.6)"} />
+                            ))}
+                          </Bar>
+                          <Line type="monotone" dataKey="cumulative" stroke="#00e5a0" strokeWidth={2} dot={{ fill: "#00e5a0", r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                          <Line type="monotone" dataKey="discounted" stroke="#0096ff" strokeWidth={1.5} strokeDasharray="5 4" dot={{ fill: "#0096ff", r: 2, strokeWidth: 0 }} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                      <div style={{ display: "flex", gap: 10, marginTop: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                        {[
+                          { color: "rgba(255,77,109,0.6)", label: "CapEx (Y0)", box: true },
+                          { color: "rgba(0,229,160,0.6)", label: "Full year", box: true },
+                          { color: "rgba(0,229,160,0.35)", label: "Partial year", box: true },
+                          { color: "#00e5a0", label: "Cumulative" },
+                          { color: "#0096ff", label: "Disc. Cumulative", dashed: true },
+                        ].map(({ color, label, dashed, box }) => (
+                          <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {box ? <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} /> : <div style={{ width: 14, height: 2, ...(dashed ? { backgroundImage: `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 8px)` } : { background: color }) }} />}
+                            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono'" }}>{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Chart 2 */}
+                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 16px 10px" }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>NPV Sensitivity vs WACC</div>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
+                          Green = profitable · Red = value destroying · Yellow = your WACC
+                          {m?.irr != null && <span style={{ color: m.irr > effectiveWACC ? "#00e5a0" : "#ff4d6d", marginLeft: 4, fontWeight: 700 }}>· IRR = {fmtPct(m.irr)}</span>}
+                        </div>
+                      </div>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={sensitivityData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                          <ReferenceArea y1={0} y2={Math.max(...sensitivityData.map(d => d.npv))} fill="rgba(0,229,160,0.05)" />
+                          <ReferenceArea y1={Math.min(...sensitivityData.map(d => d.npv))} y2={0} fill="rgba(255,77,109,0.05)" />
+                          <XAxis dataKey="wacc" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} interval={1} />
+                          <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 8, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={54} />
+                          <Tooltip contentStyle={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 10 }} formatter={v => [<span style={{ color: v >= 0 ? "#00e5a0" : "#ff4d6d" }}>{fmt(v)}</span>, v >= 0 ? "NPV ✓" : "NPV ✗"]} />
+                          <ReferenceLine y={0} stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} label={{ value: "NPV=0", fill: "rgba(255,255,255,0.3)", fontSize: 8, position: "insideTopRight" }} />
+                          <ReferenceLine x={`${(effectiveWACC * 100).toFixed(0)}%`} stroke="#ffd166" strokeDasharray="5 4" strokeWidth={2} label={{ value: `Eff. WACC ${fmtPct(effectiveWACC)}`, fill: "#ffd166", fontSize: 8, position: "insideTopLeft" }} />
+                          <Line type="monotone" dataKey="npv" strokeWidth={2.5} dot={false} activeDot={{ r: 4, fill: "#00e5a0" }} stroke="#00e5a0" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                      <div style={{ display: "flex", gap: 10, marginTop: 6, justifyContent: "center" }}>
+                        {[
+                          { color: "rgba(0,229,160,0.4)", label: "Profitable zone", box: true },
+                          { color: "rgba(255,77,109,0.4)", label: "Unprofitable zone", box: true },
+                          { color: "#ffd166", label: "Current WACC", dashed: true },
+                        ].map(({ color, label, dashed, box }) => (
+                          <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {box ? <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} /> : <div style={{ width: 14, height: 2, backgroundImage: `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 8px)` }} />}
+                            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono'" }}>{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                  </div>
                 </>
               ) : (
                 <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: 60, fontSize: 13 }}>Enter valid entitlement values to compute metrics</div>
               )}
-            </div>
-          </div>
-
-          {/* Dashboard Section */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>▶ Dashboard</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-
-            {/* Chart 1 */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "22px 22px 12px" }}>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 13, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Annual Entitlement + Cumulative</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
-                  Y0 = CapEx investment · Y1–Y3 = annual entitlement · Line = cumulative
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={260}>
-                <ComposedChart data={entitlementChartData} margin={{ top: 16, right: 16, left: 10, bottom: 0 }} barCategoryGap="20%" barGap={0}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis dataKey="year" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={64} />
-                  <Tooltip
-                    contentStyle={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 11 }}
-                    labelStyle={{ color: "rgba(255,255,255,0.7)", marginBottom: 4, fontWeight: 700 }}
-                    itemStyle={{ color: "rgba(255,255,255,0.55)" }}
-                    formatter={(v, n) => {
-                      if (n === "investment") return [<span style={{ color: "#ff4d6d" }}>{fmt(v)}</span>, "CapEx (Y0)"];
-                      if (n === "entitlement") return [<span style={{ color: "#00e5a0" }}>{fmt(v)}</span>, "Annual Entitlement"];
-                      if (n === "cumulative") return [<span style={{ color: "#00e5a0" }}>{fmt(v)}</span>, "Cumulative"];
-                      if (n === "discounted") return [<span style={{ color: "#0096ff" }}>{fmt(v)}</span>, "Disc. Cumulative"];
-                      return [fmt(v), n];
-                    }}
-                  />
-                  <ReferenceLine y={0} stroke="rgba(255,255,255,0.25)" strokeWidth={1.5} />
-                  <Bar dataKey="investment" stackId="main" fill="rgba(255,77,109,0.6)" radius={[0, 0, 4, 4]} />
-                  <Bar dataKey="partial" stackId="main" fill="rgba(0,229,160,0.35)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="entitlement" stackId="main" radius={[4, 4, 0, 0]}>
-                    {entitlementChartData.map((entry, i) => (
-                      <Cell key={i} fill={entry.isPartialYear ? "rgba(0,229,160,0.35)" : "rgba(0,229,160,0.6)"} />
-                    ))}
-                  </Bar>
-                  <Line type="monotone" dataKey="cumulative" stroke="#00e5a0" strokeWidth={2.5} dot={{ fill: "#00e5a0", r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="discounted" stroke="#0096ff" strokeWidth={2} strokeDasharray="5 4" dot={{ fill: "#0096ff", r: 3, strokeWidth: 0 }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-              <div style={{ display: "flex", gap: 14, marginTop: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                {[
-                  { color: "rgba(255,77,109,0.6)", label: "CapEx (Y0)", box: true },
-                  { color: "rgba(0,229,160,0.6)", label: "Full year entitlement", box: true },
-                  { color: "rgba(0,229,160,0.35)", label: "Partial year", box: true },
-                  { color: "#00e5a0", label: "Cumulative" },
-                  { color: "#0096ff", label: "Disc. Cumulative", dashed: true },
-                ].map(({ color, label, dashed, box }) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    {box
-                      ? <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
-                      : <div style={{ width: 18, height: 2, ...(dashed ? { backgroundImage: `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 8px)` } : { background: color }) }} />
-                    }
-                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono'" }}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Chart 2 */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "22px 22px 12px" }}>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 13, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>NPV Sensitivity vs WACC</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
-                  Green = profitable · Red = value destroying · Yellow = your WACC
-                  {m?.irr != null && <span style={{ color: m.irr > effectiveWACC ? "#00e5a0" : "#ff4d6d", marginLeft: 6, fontWeight: 700 }}>· IRR = {fmtPct(m.irr)}{m.irr < effectiveWACC ? " ✗ Below effective WACC" : ""}</span>}
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={sensitivityData} margin={{ top: 16, right: 16, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <ReferenceArea y1={0} y2={Math.max(...sensitivityData.map(d => d.npv))} fill="rgba(0,229,160,0.05)" />
-                  <ReferenceArea y1={Math.min(...sensitivityData.map(d => d.npv))} y2={0} fill="rgba(255,77,109,0.05)" />
-                  <XAxis dataKey="wacc" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} interval={1} />
-                  <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={64} />
-                  <Tooltip
-                    contentStyle={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 11 }}
-                    formatter={v => [<span style={{ color: v >= 0 ? "#00e5a0" : "#ff4d6d" }}>{fmt(v)}</span>, v >= 0 ? "NPV ✓ Profitable" : "NPV ✗ Unprofitable"]}
-                  />
-                  <ReferenceLine y={0} stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} label={{ value: "NPV=0", fill: "rgba(255,255,255,0.3)", fontSize: 9, position: "insideTopRight" }} />
-                  <ReferenceLine x={`${(effectiveWACC * 100).toFixed(0)}%`} stroke="#ffd166" strokeDasharray="5 4" strokeWidth={2} label={{ value: `Eff. WACC ${fmtPct(effectiveWACC)}`, fill: "#ffd166", fontSize: 9, position: "insideTopLeft" }} />
-                  <Line type="monotone" dataKey="npv" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#00e5a0" }} stroke="#00e5a0" />
-                </LineChart>
-              </ResponsiveContainer>
-              <div style={{ display: "flex", gap: 14, marginTop: 8, justifyContent: "center" }}>
-                {[
-                  { color: "rgba(0,229,160,0.4)", label: "Profitable zone", box: true },
-                  { color: "rgba(255,77,109,0.4)", label: "Unprofitable zone", box: true },
-                  { color: "#ffd166", label: "Current WACC", dashed: true },
-                ].map(({ color, label, dashed, box }) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    {box
-                      ? <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
-                      : <div style={{ width: 18, height: 2, backgroundImage: `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 8px)` }} />
-                    }
-                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono'" }}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
             </div>
           </div>
 
