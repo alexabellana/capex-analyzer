@@ -672,8 +672,10 @@ export default function CapExAnalyzer() {
             </div>
           </div>
 
-          {/* Charts */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          {/* Dashboard Section */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>▶ Dashboard</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
 
             {/* Chart 1 */}
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "22px 22px 12px" }}>
@@ -771,6 +773,7 @@ export default function CapExAnalyzer() {
                   </div>
                 ))}
               </div>
+            </div>
             </div>
           </div>
 
