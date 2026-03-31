@@ -113,6 +113,107 @@ const MONTHS = [
 ];
 // startMonth=0 is the special "January Y+1" case — no Y0 entitlement, full Y1/Y2/Y3
 
+// ─── Country WACC Data (Amazon Internal — 30-APR-2025) ────────────────────────
+// Tiers: Lowest=12%, Low=13%, Medium=15%, High=21%, Highest=calculated
+const WACC_TIERS = {
+  lowest: { label: "Lowest Risk", wacc: 12, color: "#0F6E56", bg: "rgba(29,158,117,0.12)" },
+  low:    { label: "Low Risk",    wacc: 13, color: "#185FA5", bg: "rgba(55,138,221,0.10)" },
+  medium: { label: "Medium Risk", wacc: 15, color: "#854F0B", bg: "rgba(186,117,23,0.10)" },
+  high:   { label: "High Risk",   wacc: 21, color: "#A32D2D", bg: "rgba(163,45,45,0.10)" },
+  highest:{ label: "Highest Risk",wacc: null, color: "#6B21A8", bg: "rgba(107,33,168,0.10)" },
+};
+
+const COUNTRY_WACC = [
+  { name: "Australia",                 tier: "lowest",    wacc: 12 },
+  { name: "Austria",                   tier: "lowest",    wacc: 12 },
+  { name: "Belgium",                   tier: "lowest",    wacc: 12 },
+  { name: "Canada",                    tier: "lowest",    wacc: 12 },
+  { name: "Czech Republic",            tier: "lowest",    wacc: 12 },
+  { name: "Denmark",                   tier: "lowest",    wacc: 12 },
+  { name: "Finland",                   tier: "lowest",    wacc: 12 },
+  { name: "France",                    tier: "lowest",    wacc: 12 },
+  { name: "Germany",                   tier: "lowest",    wacc: 12 },
+  { name: "Hong Kong",                 tier: "lowest",    wacc: 12 },
+  { name: "Ireland",                   tier: "lowest",    wacc: 12 },
+  { name: "Luxembourg",                tier: "lowest",    wacc: 12 },
+  { name: "Netherlands",               tier: "lowest",    wacc: 12 },
+  { name: "New Zealand",               tier: "lowest",    wacc: 12 },
+  { name: "Norway",                    tier: "lowest",    wacc: 12 },
+  { name: "Qatar",                     tier: "lowest",    wacc: 12 },
+  { name: "Saudi Arabia",              tier: "lowest",    wacc: 12 },
+  { name: "Singapore",                 tier: "lowest",    wacc: 12 },
+  { name: "South Korea",               tier: "lowest",    wacc: 12 },
+  { name: "Sweden",                    tier: "lowest",    wacc: 12 },
+  { name: "Switzerland",               tier: "lowest",    wacc: 12 },
+  { name: "Taiwan",                    tier: "lowest",    wacc: 12 },
+  { name: "UAE",                       tier: "lowest",    wacc: 12 },
+  { name: "United Kingdom",            tier: "lowest",    wacc: 12 },
+  { name: "United States",             tier: "lowest",    wacc: 12 },
+  { name: "Chile",                     tier: "low",       wacc: 13 },
+  { name: "China",                     tier: "low",       wacc: 13 },
+  { name: "Cyprus",                    tier: "low",       wacc: 13 },
+  { name: "Iceland",                   tier: "low",       wacc: 13 },
+  { name: "Italy",                     tier: "low",       wacc: 13 },
+  { name: "Japan",                     tier: "low",       wacc: 13 },
+  { name: "Kuwait",                    tier: "low",       wacc: 13 },
+  { name: "Latvia",                    tier: "low",       wacc: 13 },
+  { name: "Malaysia",                  tier: "low",       wacc: 13 },
+  { name: "Poland",                    tier: "low",       wacc: 13 },
+  { name: "Portugal",                  tier: "low",       wacc: 13 },
+  { name: "Slovakia",                  tier: "low",       wacc: 13 },
+  { name: "Slovenia",                  tier: "low",       wacc: 13 },
+  { name: "Spain",                     tier: "low",       wacc: 13 },
+  { name: "Bulgaria",                  tier: "medium",    wacc: 15 },
+  { name: "Colombia",                  tier: "medium",    wacc: 15 },
+  { name: "Croatia",                   tier: "medium",    wacc: 15 },
+  { name: "Estonia",                   tier: "medium",    wacc: 15 },
+  { name: "Greece",                    tier: "medium",    wacc: 15 },
+  { name: "Hungary",                   tier: "medium",    wacc: 15 },
+  { name: "India",                     tier: "medium",    wacc: 15 },
+  { name: "Indonesia",                 tier: "medium",    wacc: 15 },
+  { name: "Israel",                    tier: "medium",    wacc: 15 },
+  { name: "Kazakhstan",                tier: "medium",    wacc: 15 },
+  { name: "Mauritius",                 tier: "medium",    wacc: 15 },
+  { name: "Mexico",                    tier: "medium",    wacc: 15 },
+  { name: "Panama",                    tier: "medium",    wacc: 15 },
+  { name: "Peru",                      tier: "medium",    wacc: 15 },
+  { name: "Philippines",               tier: "medium",    wacc: 15 },
+  { name: "Romania",                   tier: "medium",    wacc: 15 },
+  { name: "Thailand",                  tier: "medium",    wacc: 15 },
+  { name: "Uruguay",                   tier: "medium",    wacc: 15 },
+  { name: "Azerbaijan",                tier: "high",      wacc: 21 },
+  { name: "Bahrain",                   tier: "high",      wacc: 21 },
+  { name: "Brazil",                    tier: "high",      wacc: 21 },
+  { name: "Cambodia",                  tier: "high",      wacc: 21 },
+  { name: "Costa Rica",                tier: "high",      wacc: 21 },
+  { name: "Dominican Republic",        tier: "high",      wacc: 21 },
+  { name: "Georgia",                   tier: "high",      wacc: 21 },
+  { name: "Guatemala",                 tier: "high",      wacc: 21 },
+  { name: "Jordan",                    tier: "high",      wacc: 21 },
+  { name: "Kenya",                     tier: "high",      wacc: 21 },
+  { name: "Morocco",                   tier: "high",      wacc: 21 },
+  { name: "Oman",                      tier: "high",      wacc: 21 },
+  { name: "Rwanda",                    tier: "high",      wacc: 21 },
+  { name: "Senegal",                   tier: "high",      wacc: 21 },
+  { name: "Serbia",                    tier: "high",      wacc: 21 },
+  { name: "South Africa",              tier: "high",      wacc: 21 },
+  { name: "Trinidad and Tobago",       tier: "high",      wacc: 21 },
+  { name: "Vietnam",                   tier: "high",      wacc: 21 },
+  { name: "Turkey",                    tier: "highest",   wacc: 17.68 },
+  { name: "Bangladesh",                tier: "highest",   wacc: 18.95 },
+  { name: "Nigeria",                   tier: "highest",   wacc: 21.85 },
+  { name: "Egypt",                     tier: "highest",   wacc: 22.77 },
+  { name: "Tunisia",                   tier: "highest",   wacc: 23.09 },
+  { name: "Argentina",                 tier: "highest",   wacc: 23.91 },
+  { name: "Angola",                    tier: "highest",   wacc: 25.65 },
+  { name: "Pakistan",                  tier: "highest",   wacc: 25.65 },
+  { name: "Sri Lanka",                 tier: "highest",   wacc: 29.03 },
+  { name: "Ukraine",                   tier: "highest",   wacc: 29.03 },
+  { name: "Ecuador",                   tier: "highest",   wacc: 31.64 },
+  { name: "Ghana",                     tier: "highest",   wacc: 37.13 },
+  { name: "Lebanon",                   tier: "highest",   wacc: 37.52 },
+];
+
 // ─── Descriptions ─────────────────────────────────────────────────────────────
 
 const METRIC_DESCRIPTIONS = {
@@ -236,6 +337,10 @@ export default function CapExAnalyzer() {
   const [state, setState] = useState(DEFAULT);
   const [yearCFs, setYearCFs] = useState({ y1: DEFAULT.cashflows[0], y2: DEFAULT.cashflows[1], y3: DEFAULT.cashflows[2] });
 
+  const [waccInput, setWaccInput] = useState(String(Math.round(state.wacc * 100)));
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(null);
   const effectiveWACC = useMemo(() => state.wacc + RISK_PREMIUMS[state.riskCategory], [state.wacc, state.riskCategory]);
 
   const parsedCashflows = useMemo(() => (
@@ -481,7 +586,12 @@ export default function CapExAnalyzer() {
     w.document.close();
   };
 
-  const reset = () => { setState(DEFAULT); setYearCFs({ y1: DEFAULT.cashflows[0], y2: DEFAULT.cashflows[1], y3: DEFAULT.cashflows[2] }); };
+  const reset = () => {
+    setState(DEFAULT);
+    setYearCFs({ y1: DEFAULT.cashflows[0], y2: DEFAULT.cashflows[1], y3: DEFAULT.cashflows[2] });
+    setWaccInput(String(Math.round(DEFAULT.wacc * 100)));
+    setSelectedCountry(null);
+  };
   const update = useCallback((key) => (val) => setState(s => ({ ...s, [key]: val })), []);
   const m = metrics;
   const cfg = VERDICT_CONFIG[verdictKey] || VERDICT_CONFIG["NO-GO"];
@@ -545,7 +655,109 @@ export default function CapExAnalyzer() {
               <div style={{ fontSize: 11, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>Project Parameters</div>
 
               <InputField label="Initial Investment" value={state.initialInvestment} onChange={update("initialInvestment")} />
-              <InputField label="WACC" value={state.wacc} onChange={update("wacc")} isRate integerRate />
+              {/* WACC + Country Picker */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <label style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>WACC</label>
+                  {selectedCountry && (
+                    <span style={{ fontSize: 10, color: WACC_TIERS[selectedCountry.tier].color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>
+                      {selectedCountry.name} · {WACC_TIERS[selectedCountry.tier].label}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      type="number"
+                      value={waccInput}
+                      onChange={e => {
+                        setWaccInput(e.target.value);
+                        setSelectedCountry(null);
+                        const v = Number(e.target.value);
+                        if (!isNaN(v) && e.target.value !== "") update("wacc")(v / 100);
+                      }}
+                      onBlur={e => {
+                        const v = Number(e.target.value);
+                        if (isNaN(v) || e.target.value === "") {
+                          setWaccInput("10");
+                          update("wacc")(0.10);
+                        }
+                      }}
+                      style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "8px 28px 8px 10px", color: "#e8eaf6", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none" }}
+                      onFocus={e => (e.target.style.borderColor = "rgba(0,229,160,0.4)")}
+                    />
+                    <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", fontSize: 11, pointerEvents: "none" }}>%</span>
+                  </div>
+                  <button
+                    onClick={() => setShowCountryPicker(true)}
+                    style={{ padding: "8px 12px", borderRadius: 7, background: "rgba(55,138,221,0.08)", border: "1px solid rgba(55,138,221,0.3)", color: "#378ADD", fontSize: 10, cursor: "pointer", fontFamily: "'Space Mono',monospace", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: "nowrap", flexShrink: 0 }}
+                    onMouseEnter={e => { e.target.style.background = "rgba(55,138,221,0.15)"; }}
+                    onMouseLeave={e => { e.target.style.background = "rgba(55,138,221,0.08)"; }}>
+                    🌍 Country WACC
+                  </button>
+                </div>
+              </div>
+
+              {/* Country Picker Modal */}
+              {showCountryPicker && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  onClick={() => { setShowCountryPicker(false); setCountrySearch(""); }}>
+                  <div style={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 24, width: 460, maxHeight: "80vh", display: "flex", flexDirection: "column", gap: 14 }}
+                    onClick={e => e.stopPropagation()}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#e8eaf6", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Country WACC — Amazon AMET</span>
+                      <button onClick={() => { setShowCountryPicker(false); setCountrySearch(""); }}
+                        style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 18, cursor: "pointer", padding: "0 4px" }}>✕</button>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {Object.entries(WACC_TIERS).map(([key, t]) => (
+                        <span key={key} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 20, background: t.bg, color: t.color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>
+                          {t.label} {t.wacc ? t.wacc + "%" : "Calc."}
+                        </span>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search country..."
+                      value={countrySearch}
+                      onChange={e => setCountrySearch(e.target.value)}
+                      autoFocus
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "8px 12px", color: "#e8eaf6", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none", width: "100%" }}
+                    />
+                    <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 2, maxHeight: 380 }}>
+                      {COUNTRY_WACC
+                        .filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
+                        .map(c => {
+                          const t = WACC_TIERS[c.tier];
+                          const isSelected = selectedCountry?.name === c.name;
+                          return (
+                            <div key={c.name}
+                              onClick={() => {
+                                setSelectedCountry(c);
+                                update("wacc")(c.wacc / 100);
+                                setWaccInput(String(c.wacc));
+                                setShowCountryPicker(false);
+                                setCountrySearch("");
+                              }}
+                              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, cursor: "pointer", background: isSelected ? t.bg : "transparent", border: isSelected ? `1px solid ${t.color}40` : "1px solid transparent", transition: "all 0.1s" }}
+                              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}>
+                              <span style={{ fontSize: 13, color: "#e8eaf6", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{c.name}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 12, background: t.bg, color: t.color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>{t.label.split(" ")[0]}</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: t.color, fontFamily: "'Space Mono',monospace", minWidth: 40, textAlign: "right" }}>{c.wacc}%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {COUNTRY_WACC.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                        <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: 24, fontSize: 13 }}>No countries found</div>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", fontFamily: "'Space Mono',monospace" }}>Amazon Internal · Country Risk Adjusted WACCs · 30-APR-2025</div>
+                  </div>
+                </div>
+              )}
 
               {/* Risk Category Selector */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -837,4 +1049,3 @@ export default function CapExAnalyzer() {
     </>
   );
 }
-
