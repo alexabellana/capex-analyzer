@@ -343,47 +343,82 @@ export default function CapExAnalyzer() {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const effectiveWACC = useMemo(() => state.wacc + RISK_PREMIUMS[state.riskCategory], [state.wacc, state.riskCategory]);
 
-  const parsedCashflows = useMemo(() => (
-    [yearCFs.y1, yearCFs.y2, yearCFs.y3].map(v => Math.round(Number(v))).filter(v => !isNaN(v) && v !== 0)
-  ), [yearCFs]);
+  // Keep all 3 values including zeros — zeros are valid (no entitlement that year)
+  // Only filter if the field is empty/NaN
+  const parsedCashflows = useMemo(() => {
+    const vals = [yearCFs.y1, yearCFs.y2, yearCFs.y3].map(v => {
+      const n = Math.round(Number(v));
+      return isNaN(n) ? null : n;
+    });
+    // Must have at least Y1 to compute anything
+    if (vals[0] === null || vals[0] === 0) return [];
+    return [
+      vals[0],
+      vals[1] !== null ? vals[1] : 0,
+      vals[2] !== null ? vals[2] : 0,
+    ];
+  }, [yearCFs]);
 
   const adjustedCashflows = useMemo(() => {
     const m = state.startMonth;
-    // startMonth=0 → January Y+1: no Y0 entitlement, full Y1/Y2/Y3
+    const empty = { y0Ent: 0, y1: 0, y2: 0, y3: 0, y0Months: m === 0 ? 0 : 12 - m + 1, y3Months: m === 0 ? 12 : m - 1 };
+    if (parsedCashflows.length === 0) return empty;
+
+    const [y1raw, y2raw, y3raw] = parsedCashflows;
+
     if (m === 0) {
-      if (parsedCashflows.length === 0) return { y0Ent: 0, y1: 0, y2: 0, y3: 0, y0Months: 0, y3Months: 12 };
-      const annual = parsedCashflows[0];
-      return {
-        y0Ent: 0,
-        y1: annual,
-        y2: parsedCashflows[1] || annual,
-        y3: parsedCashflows[2] || parsedCashflows[1] || annual,
-        y0Months: 0,
-        y3Months: 12,
-      };
+      // January Y+1: no Y0 entitlement
+      return { y0Ent: 0, y1: y1raw, y2: y2raw, y3: y3raw, y0Months: 0, y3Months: 12 };
     }
     const y0Months = 12 - m + 1;
     const y3Months = m - 1;
-    if (parsedCashflows.length === 0) return { y0Ent: 0, y1: 0, y2: 0, y3: 0, y0Months, y3Months };
-    const annual = parsedCashflows[0];
-    const y0Ent = Math.round(annual * y0Months / 12);
-    const y1    = annual;
-    const y2    = parsedCashflows[1] || annual;
-    const y3    = Math.round((parsedCashflows[2] || parsedCashflows[1] || annual) * y3Months / 12);
-    return { y0Ent, y1, y2, y3, y0Months, y3Months };
+    return {
+      y0Ent: Math.round(y1raw * y0Months / 12),
+      y1:    y1raw,
+      y2:    y2raw,
+      y3:    Math.round(y3raw * y3Months / 12),
+      y0Months, y3Months
+    };
   }, [parsedCashflows, state.startMonth]);
 
+  // ── Model 2: project years — Y1/Y2/Y3 = 12-month project years from go-live ──
   const allCashflows = useMemo(() => {
     if (parsedCashflows.length === 0) return [-state.initialInvestment];
-    const { y0Ent, y1, y2, y3 } = adjustedCashflows;
+    const [y1raw, y2raw, y3raw] = parsedCashflows;
     const m = state.startMonth;
-    // January Y+1: no Y0 entitlement, full Y1/Y2/Y3
-    if (m === 0) return [-state.initialInvestment, y1, y2, y3];
-    // January Y0: full Y0 entitlement, no Y3
-    const flows = [-state.initialInvestment + y0Ent, y1, y2];
-    if (m > 1 && y3 > 0) flows.push(y3);
+
+    // Jan Y+1: no Y0 entitlement, project years align with calendar years
+    if (m === 0) {
+      const flows = [-state.initialInvestment, y1raw];
+      if (y2raw > 0) flows.push(y2raw);
+      if (y3raw > 0) flows.push(y3raw);
+      return flows;
+    }
+
+    // Jan Y0: full project year 1 in Y0 (12 months, not discounted)
+    if (m === 1) {
+      const flows = [-state.initialInvestment + y1raw];
+      if (y2raw > 0) flows.push(y2raw);
+      if (y3raw > 0) flows.push(y3raw);
+      return flows;
+    }
+
+    // All other months: model 2 — each discount period t=1,2,3 contains
+    // the tail of one project year + head of the next.
+    // f = fraction of year captured in Y0 (e.g. Jul → 6/12)
+    // r = remaining fraction spilling into next period (e.g. Jul → 6/12)
+    const f = (13 - m) / 12;
+    const r = (m - 1) / 12;
+    const y0Ent = Math.round(y1raw * f);           // t=0 (not discounted)
+    const p1    = Math.round(y1raw * r + y2raw * f); // t=1
+    const p2    = Math.round(y2raw * r + y3raw * f); // t=2
+    const p3    = Math.round(y3raw * r);              // t=3
+    const flows = [-state.initialInvestment + y0Ent];
+    if (p1 > 0) flows.push(p1);
+    if (p2 > 0) flows.push(p2);
+    if (p3 > 0) flows.push(p3);
     return flows;
-  }, [state.initialInvestment, parsedCashflows, adjustedCashflows, state.startMonth]);
+  }, [state.initialInvestment, parsedCashflows, state.startMonth]);
 
   const metrics = useMemo(() => {
     if (parsedCashflows.length === 0) return null;
@@ -391,8 +426,9 @@ export default function CapExAnalyzer() {
     const irr      = calcIRR(allCashflows);
     const payback  = calcPayback(allCashflows);
     const dPayback = calcDiscountedPayback(allCashflows, effectiveWACC);
-    const { y0Ent, y1, y2, y3 } = adjustedCashflows;
-    const totalInflows = y0Ent + y1 + y2 + (state.startMonth !== 1 ? y3 : 0);
+    const [y1raw, y2raw, y3raw] = parsedCashflows;
+    // ROI uses total project entitlement (3 full project years), undiscounted
+    const totalInflows = y1raw + y2raw + y3raw;
     const roi = (totalInflows - state.initialInvestment) / state.initialInvestment;
     return { npv, irr, payback, dPayback, roi };
   }, [allCashflows, effectiveWACC, state, parsedCashflows, adjustedCashflows]);
@@ -1049,4 +1085,3 @@ export default function CapExAnalyzer() {
     </>
   );
 }
-
