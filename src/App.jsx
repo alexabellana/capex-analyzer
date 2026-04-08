@@ -16,10 +16,7 @@ const fmt = (v, decimals = 2, prefix = "$") => {
 const fmtPct = (v, d = 2) => (v === null || isNaN(v) ? "N/A" : `${(v * 100).toFixed(d)}%`);
 const fmtPayback = (v) => {
   if (v === null || v === undefined) return "N/A";
-  if (v >= 1) return `${v.toFixed(2)} yrs`;
-  const months = v * 12;
-  if (months >= 1) return `${months.toFixed(1)} mos`;
-  return `${Math.round(v * 365)} days`;
+  return `${v.toFixed(2)} yrs`;
 };
 
 function calcNPV(rate, cashflows) {
@@ -39,34 +36,40 @@ function calcIRR(cashflows, guess = 0.1) {
   return isFinite(r) ? r : null;
 }
 
-function calcPayback(cashflows) {
+function calcPayback(cashflows, investment, startMonth) {
+  const y0Months = startMonth === 0 ? 0 : (startMonth === 1 ? 12 : 13 - startMonth);
+  const y0Years  = y0Months / 12;
+  if (cashflows[0] >= 0) {
+    const y0Ent = cashflows[0] + investment;
+    return (investment / y0Ent) * y0Years;
+  }
   let cum = 0;
   for (let t = 0; t < cashflows.length; t++) {
     const prev = cum;
     cum += cashflows[t];
-    if (cum >= 0 && t > 0) return t - 1 + Math.abs(prev) / cashflows[t];
+    if (cum >= 0 && t > 0) return y0Years + (t - 1) + Math.abs(prev) / cashflows[t];
   }
-  // Extrapolate beyond horizon using last year's entitlement
   const lastCF = cashflows[cashflows.length - 1];
-  if (lastCF > 0 && cum < 0) {
-    return cashflows.length - 1 + Math.abs(cum) / lastCF;
-  }
+  if (lastCF > 0 && cum < 0) return y0Years + cashflows.length - 1 + Math.abs(cum) / lastCF;
   return null;
 }
 
-function calcDiscountedPayback(cashflows, rate) {
+function calcDiscountedPayback(cashflows, rate, investment, startMonth) {
+  const y0Months = startMonth === 0 ? 0 : (startMonth === 1 ? 12 : 13 - startMonth);
+  const y0Years  = y0Months / 12;
+  if (cashflows[0] >= 0) {
+    const y0Ent = cashflows[0] + investment;
+    return (investment / y0Ent) * y0Years;
+  }
   let cum = 0;
   for (let t = 0; t < cashflows.length; t++) {
     const prev = cum;
     const dcf = cashflows[t] / Math.pow(1 + rate, t);
     cum += dcf;
-    if (cum >= 0 && t > 0) return t - 1 + Math.abs(prev) / dcf;
+    if (cum >= 0 && t > 0) return y0Years + (t - 1) + Math.abs(prev) / dcf;
   }
-  // Extrapolate beyond horizon using last year's discounted entitlement
   const lastDCF = cashflows[cashflows.length - 1] / Math.pow(1 + rate, cashflows.length - 1);
-  if (lastDCF > 0 && cum < 0) {
-    return cashflows.length - 1 + Math.abs(cum) / lastDCF;
-  }
+  if (lastDCF > 0 && cum < 0) return y0Years + cashflows.length - 1 + Math.abs(cum) / lastDCF;
   return null;
 }
 
@@ -424,8 +427,8 @@ export default function CapExAnalyzer() {
     if (parsedCashflows.length === 0) return null;
     const npv      = calcNPV(effectiveWACC, allCashflows);
     const irr      = calcIRR(allCashflows);
-    const payback  = calcPayback(allCashflows);
-    const dPayback = calcDiscountedPayback(allCashflows, effectiveWACC);
+    const payback  = calcPayback(allCashflows, state.initialInvestment, state.startMonth);
+    const dPayback = calcDiscountedPayback(allCashflows, effectiveWACC, state.initialInvestment, state.startMonth);
     const [y1raw, y2raw, y3raw] = parsedCashflows;
     // ROI uses total project entitlement (3 full project years), undiscounted
     const totalInflows = y1raw + y2raw + y3raw;
