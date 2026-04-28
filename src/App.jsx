@@ -19,57 +19,92 @@ const fmtPayback = (v) => {
   return `${v.toFixed(2)} yrs`;
 };
 
-function calcNPV(rate, cashflows) {
-  return cashflows.reduce((acc, cf, t) => acc + cf / Math.pow(1 + rate, t), 0);
+// ─── Financial functions — monthly resolution, mathematically rigorous ───────
+// All cashflows are computed at monthly granularity to ensure monotonic
+// behaviour: delaying a project always produces a longer payback and lower NPV.
+//
+// Convention: Y0 entitlement (months captured BEFORE end of Y0) is NOT
+// discounted. All other entitlement is discounted from its midpoint in time.
+
+// Build 36 monthly entitlement values from Y1/Y2/Y3 (split each year into 12 equal months)
+function buildMonthlyStream(y1, y2, y3) {
+  return [
+    ...Array(12).fill(y1 / 12),
+    ...Array(12).fill(y2 / 12),
+    ...Array(12).fill(y3 / 12),
+  ];
 }
 
-function calcIRR(cashflows, guess = 0.1) {
+// y0Months: entitlement months that fall before end of Y0 (not discounted)
+function getY0Months(startMonth) {
+  if (startMonth === 0) return 0;        // Jan Y+1 → no Y0 entitlement
+  if (startMonth === 1) return 12;       // Jan Y0  → full Y1 captured in Y0
+  return 13 - startMonth;                // mid-year start → partial Y0
+}
+
+function calcNPV(rate, y1, y2, y3, startMonth, investment) {
+  const monthly  = buildMonthlyStream(y1, y2, y3);
+  const y0Months = getY0Months(startMonth);
+  let npv = -investment;
+  for (let i = 0; i < monthly.length; i++) {
+    if (i < y0Months) {
+      npv += monthly[i];
+    } else {
+      const tYears = (i + 0.5) / 12;
+      npv += monthly[i] / Math.pow(1 + rate, tYears);
+    }
+  }
+  return npv;
+}
+
+function calcIRR(y1, y2, y3, startMonth, investment, guess = 0.1) {
   let r = guess;
-  for (let i = 0; i < 1000; i++) {
-    const npv = calcNPV(r, cashflows);
-    const dnpv = cashflows.reduce((acc, cf, t) => acc - (t * cf) / Math.pow(1 + r, t + 1), 0);
-    if (Math.abs(dnpv) < 1e-12) break;
-    const rNew = r - npv / dnpv;
+  for (let iter = 0; iter < 1000; iter++) {
+    const npv  = calcNPV(r, y1, y2, y3, startMonth, investment);
+    // Numerical derivative for stability
+    const eps = 1e-6;
+    const d = (calcNPV(r + eps, y1, y2, y3, startMonth, investment) - npv) / eps;
+    if (Math.abs(d) < 1e-12) break;
+    const rNew = r - npv / d;
     if (Math.abs(rNew - r) < 1e-10) return rNew;
     r = rNew;
+    if (r < -0.99) r = -0.99;
   }
   return isFinite(r) ? r : null;
 }
 
-function calcPayback(cashflows, investment, startMonth) {
-  const y0Months = startMonth === 0 ? 0 : (startMonth === 1 ? 12 : 13 - startMonth);
-  const y0Years  = y0Months / 12;
-  if (cashflows[0] >= 0) {
-    const y0Ent = cashflows[0] + investment;
-    return (investment / y0Ent) * y0Years;
-  }
-  let cum = 0;
-  for (let t = 0; t < cashflows.length; t++) {
+function calcPayback(y1, y2, y3, startMonth, investment) {
+  const monthly = buildMonthlyStream(y1, y2, y3);
+  let cum = -investment;
+  if (cum >= 0) return 0;
+  for (let i = 0; i < monthly.length; i++) {
     const prev = cum;
-    cum += cashflows[t];
-    if (cum >= 0 && t > 0) return y0Years + (t - 1) + Math.abs(prev) / cashflows[t];
+    cum += monthly[i];
+    if (cum >= 0) {
+      // Linear interpolation within month i
+      return (i + Math.abs(prev) / monthly[i]) / 12;
+    }
   }
-  const lastCF = cashflows[cashflows.length - 1];
-  if (lastCF > 0 && cum < 0) return y0Years + cashflows.length - 1 + Math.abs(cum) / lastCF;
   return null;
 }
 
-function calcDiscountedPayback(cashflows, rate, investment, startMonth) {
-  const y0Months = startMonth === 0 ? 0 : (startMonth === 1 ? 12 : 13 - startMonth);
-  const y0Years  = y0Months / 12;
-  if (cashflows[0] >= 0) {
-    const y0Ent = cashflows[0] + investment;
-    return (investment / y0Ent) * y0Years;
-  }
-  let cum = 0;
-  for (let t = 0; t < cashflows.length; t++) {
+function calcDiscountedPayback(rate, y1, y2, y3, startMonth, investment) {
+  const monthly  = buildMonthlyStream(y1, y2, y3);
+  const y0Months = getY0Months(startMonth);
+  let cum = -investment;
+  if (cum >= 0) return 0;
+  for (let i = 0; i < monthly.length; i++) {
     const prev = cum;
-    const dcf = cashflows[t] / Math.pow(1 + rate, t);
-    cum += dcf;
-    if (cum >= 0 && t > 0) return y0Years + (t - 1) + Math.abs(prev) / dcf;
+    let cf = monthly[i];
+    if (i >= y0Months) {
+      const tYears = (i + 0.5) / 12;
+      cf = monthly[i] / Math.pow(1 + rate, tYears);
+    }
+    cum += cf;
+    if (cum >= 0) {
+      return (i + Math.abs(prev) / cf) / 12;
+    }
   }
-  const lastDCF = cashflows[cashflows.length - 1] / Math.pow(1 + rate, cashflows.length - 1);
-  if (lastDCF > 0 && cum < 0) return y0Years + cashflows.length - 1 + Math.abs(cum) / lastDCF;
   return null;
 }
 
@@ -384,51 +419,43 @@ export default function CapExAnalyzer() {
     };
   }, [parsedCashflows, state.startMonth]);
 
-  // ── Model 2: project years — Y1/Y2/Y3 = 12-month project years from go-live ──
+  // Cashflows kept as bucketed array for the chart only — financial calcs
+  // use the monthly-resolution functions directly.
   const allCashflows = useMemo(() => {
-    if (parsedCashflows.length === 0) return [-state.initialInvestment];
-    const [y1raw, y2raw, y3raw] = parsedCashflows;
+    if (parsedCashflows.length === 0) return [{ cf: -state.initialInvestment, tYears: 0 }];
+    const [y1, y2, y3] = parsedCashflows;
+    const monthly = [
+      ...Array(12).fill(y1 / 12),
+      ...Array(12).fill(y2 / 12),
+      ...Array(12).fill(y3 / 12),
+    ];
     const m = state.startMonth;
+    const y0Months = m === 0 ? 0 : (m === 1 ? 12 : 13 - m);
 
-    // Jan Y+1: no Y0 entitlement, project years align with calendar years
-    if (m === 0) {
-      const flows = [-state.initialInvestment, y1raw];
-      if (y2raw > 0) flows.push(y2raw);
-      if (y3raw > 0) flows.push(y3raw);
-      return flows;
+    const y0Ent = Math.round(monthly.slice(0, y0Months).reduce((a, b) => a + b, 0));
+    const flows = [{ cf: -state.initialInvestment + y0Ent, tYears: 0 }];
+
+    let monthIdx = y0Months;
+    while (monthIdx < monthly.length) {
+      const remaining = monthly.length - monthIdx;
+      const chunkSize = Math.min(12, remaining);
+      const sum = Math.round(monthly.slice(monthIdx, monthIdx + chunkSize).reduce((a, b) => a + b, 0));
+      if (sum > 0) {
+        const tYears = (monthIdx + chunkSize / 2) / 12;
+        flows.push({ cf: sum, tYears });
+      }
+      monthIdx += chunkSize;
     }
-
-    // Jan Y0: full project year 1 in Y0 (12 months, not discounted)
-    if (m === 1) {
-      const flows = [-state.initialInvestment + y1raw];
-      if (y2raw > 0) flows.push(y2raw);
-      if (y3raw > 0) flows.push(y3raw);
-      return flows;
-    }
-
-    // All other months: model 2 — each discount period t=1,2,3 contains
-    // the tail of one project year + head of the next.
-    // f = fraction of year captured in Y0 (e.g. Jul → 6/12)
-    // r = remaining fraction spilling into next period (e.g. Jul → 6/12)
-    const f = (13 - m) / 12;
-    const r = (m - 1) / 12;
-    const y0Ent = Math.round(y1raw * f);           // t=0 (not discounted)
-    const p1    = Math.round(y1raw * r + y2raw * f); // t=1
-    const p2    = Math.round(y2raw * r + y3raw * f); // t=2
-    const p3    = Math.round(y3raw * r);              // t=3
-    const flows = [-state.initialInvestment + y0Ent];
-    if (p1 > 0) flows.push(p1);
-    if (p2 > 0) flows.push(p2);
-    if (p3 > 0) flows.push(p3);
     return flows;
   }, [state.initialInvestment, parsedCashflows, state.startMonth]);
 
   const metrics = useMemo(() => {
     if (parsedCashflows.length === 0) return null;
-    const npv      = calcNPV(effectiveWACC, allCashflows);
-    const irr      = calcIRR(allCashflows);
-    const payback  = calcPayback(allCashflows, state.initialInvestment, state.startMonth);
-    const dPayback = calcDiscountedPayback(allCashflows, effectiveWACC, state.initialInvestment, state.startMonth);
+    const [y1, y2, y3] = parsedCashflows;
+    const npv      = calcNPV(effectiveWACC, y1, y2, y3, state.startMonth, state.initialInvestment);
+    const irr      = calcIRR(y1, y2, y3, state.startMonth, state.initialInvestment);
+    const payback  = calcPayback(y1, y2, y3, state.startMonth, state.initialInvestment);
+    const dPayback = calcDiscountedPayback(effectiveWACC, y1, y2, y3, state.startMonth, state.initialInvestment);
     const [y1raw, y2raw, y3raw] = parsedCashflows;
     // ROI uses total project entitlement (3 full project years), undiscounted
     const totalInflows = y1raw + y2raw + y3raw;
@@ -457,14 +484,16 @@ export default function CapExAnalyzer() {
     const m = state.startMonth;
     const { y0Months, y3Months, y0Ent } = adjustedCashflows;
     let cum = 0, cumDisc = 0;
-    return allCashflows.map((cf, t) => {
+    return allCashflows.map((flow, t) => {
+      const cf = flow.cf;
       cum += cf;
-      cumDisc += cf / Math.pow(1 + effectiveWACC, t);
+      cumDisc += cf / Math.pow(1 + effectiveWACC, flow.tYears);
       const isY0 = t === 0;
-      const isY3 = t === allCashflows.length - 1 && (m > 1 || m === 0) && t >= 3;
+      const lastIdx = allCashflows.length - 1;
+      const isY3 = t === lastIdx && lastIdx >= 3 && m !== 0 && m !== 1;
       const label = isY0
         ? (m === 0 ? "Y0 (0m)" : `Y0 (${y0Months}m)`)
-        : isY3 && m > 1 ? `Y3 (${y3Months}m)`
+        : isY3 ? `Y3 (${y3Months}m)`
         : `Y${t}`;
       return {
         year: label,
@@ -473,14 +502,19 @@ export default function CapExAnalyzer() {
         entitlement: !isY0 ? Math.round(cf) : null,
         cumulative: Math.round(cum),
         discounted: Math.round(cumDisc),
-        isPartialYear: (isY0 && m !== 0) || (isY3 && m > 1),
+        isPartialYear: (isY0 && m !== 0 && m !== 1) || isY3,
       };
     });
   }, [allCashflows, effectiveWACC, state.startMonth, state.initialInvestment, adjustedCashflows]);
 
-  const sensitivityData = useMemo(() => (
-    WACC_RANGE.map(r => ({ wacc: `${(r * 100).toFixed(0)}%`, npv: Math.round(calcNPV(r, allCashflows)) }))
-  ), [allCashflows]);
+  const sensitivityData = useMemo(() => {
+    if (parsedCashflows.length === 0) return WACC_RANGE.map(r => ({ wacc: `${(r * 100).toFixed(0)}%`, npv: -state.initialInvestment }));
+    const [y1, y2, y3] = parsedCashflows;
+    return WACC_RANGE.map(r => ({
+      wacc: `${(r * 100).toFixed(0)}%`,
+      npv: Math.round(calcNPV(r, y1, y2, y3, state.startMonth, state.initialInvestment))
+    }));
+  }, [parsedCashflows, state.startMonth, state.initialInvestment]);
 
   const generatePDF = () => {
     if (!m) return;
@@ -1088,3 +1122,4 @@ export default function CapExAnalyzer() {
     </>
   );
 }
+
