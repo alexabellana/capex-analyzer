@@ -713,29 +713,29 @@ export default function CapExAnalyzer() {
           --tooltip-bg:   #0d1520;
         }
         :root[data-theme='light'] {
-          --bg-app:       #f6f7f9;
+          --bg-app:       #e8ebf0;
           --bg-header:    #ffffff;
           --bg-card:      #ffffff;
-          --bg-card-2:    #ffffff;
-          --bg-input:     #ffffff;
-          --bg-input-2:   #f0f2f5;
+          --bg-card-2:    #f5f7fa;
+          --bg-input:     #f0f3f7;
+          --bg-input-2:   #e6eaf0;
           --bg-modal:     #ffffff;
-          --bg-overlay:   rgba(0,0,0,0.4);
-          --bg-hover:     rgba(0,0,0,0.04);
-          --bd-1:         rgba(0,0,0,0.06);
-          --bd-2:         rgba(0,0,0,0.08);
-          --bd-3:         rgba(0,0,0,0.12);
-          --bd-4:         rgba(0,0,0,0.15);
-          --bd-5:         rgba(0,0,0,0.18);
-          --tx-strong:    #0d1520;
-          --tx-base:      rgba(0,0,0,0.78);
-          --tx-mute:      rgba(0,0,0,0.62);
-          --tx-soft:      rgba(0,0,0,0.55);
-          --tx-faint:     rgba(0,0,0,0.5);
-          --tx-dim:       rgba(0,0,0,0.42);
-          --tx-veryDim:   rgba(0,0,0,0.32);
-          --tx-ghost:     rgba(0,0,0,0.22);
-          --grid:         rgba(0,0,0,0.06);
+          --bg-overlay:   rgba(15,25,40,0.55);
+          --bg-hover:     rgba(15,25,40,0.06);
+          --bd-1:         rgba(15,25,40,0.10);
+          --bd-2:         rgba(15,25,40,0.14);
+          --bd-3:         rgba(15,25,40,0.20);
+          --bd-4:         rgba(15,25,40,0.25);
+          --bd-5:         rgba(15,25,40,0.32);
+          --tx-strong:    #0a1220;
+          --tx-base:      rgba(10,18,32,0.88);
+          --tx-mute:      rgba(10,18,32,0.72);
+          --tx-soft:      rgba(10,18,32,0.65);
+          --tx-faint:     rgba(10,18,32,0.58);
+          --tx-dim:       rgba(10,18,32,0.48);
+          --tx-veryDim:   rgba(10,18,32,0.38);
+          --tx-ghost:     rgba(10,18,32,0.28);
+          --grid:         rgba(15,25,40,0.10);
           --tooltip-bg:   #ffffff;
         }
 
@@ -1194,5 +1194,6 @@ export default function CapExAnalyzer() {
     </>
   );
 }
+
 
 
