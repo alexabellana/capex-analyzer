@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart, Bar, Cell, ReferenceArea } from "recharts";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -277,8 +277,8 @@ const MetricCard = ({ label, value, sub, highlight, verdictKey }) => {
   const statusColor = cfg ? cfg.color : highlight ? "#00e5a0" : null;
   return (
     <div style={{
-      background: highlight ? "linear-gradient(135deg,rgba(0,229,160,0.08),rgba(0,150,255,0.06))" : "rgba(255,255,255,0.03)",
-      border: `1px solid ${statusColor ? statusColor + "40" : "rgba(255,255,255,0.07)"}`,
+      background: highlight ? "linear-gradient(135deg,rgba(0,229,160,0.08),rgba(0,150,255,0.06))" : "var(--bg-card-2)",
+      border: `1px solid ${statusColor ? statusColor + "40" : "var(--bd-2)"}`,
       borderRadius: 12,
       padding: 22,
       display: "flex",
@@ -289,17 +289,17 @@ const MetricCard = ({ label, value, sub, highlight, verdictKey }) => {
     }}>
       {statusColor && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,transparent,${statusColor},transparent)` }} />}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 13, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.7)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{label}</span>
+        <span style={{ fontSize: 13, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "var(--tx-base)", letterSpacing: "0.05em", textTransform: "uppercase" }}>{label}</span>
         {desc && (
-          <button onClick={() => setOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: open ? "#00e5a0" : "rgba(255,255,255,0.3)", fontSize: 12, fontFamily: "'Space Mono',monospace" }}>
+          <button onClick={() => setOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: open ? "#00e5a0" : "var(--tx-dim)", fontSize: 12, fontFamily: "'Space Mono',monospace" }}>
             {open ? "▲" : "▼"}
           </button>
         )}
       </div>
       <span style={{ fontSize: 28, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: statusColor || "#e8eaf6", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</span>
-      {sub && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'Space Mono',monospace" }}>{sub}</span>}
+      {sub && <span style={{ fontSize: 12, color: "var(--tx-soft)", fontFamily: "'Space Mono',monospace" }}>{sub}</span>}
       {open && desc && (
-        <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.07)", fontSize: 11, color: "rgba(255,255,255,0.55)", fontFamily: "'Space Mono',monospace", lineHeight: 1.7, whiteSpace: "pre-line" }}>{desc}</div>
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--bd-2)", fontSize: 11, color: "var(--tx-mute)", fontFamily: "'Space Mono',monospace", lineHeight: 1.7, whiteSpace: "pre-line" }}>{desc}</div>
       )}
     </div>
   );
@@ -313,28 +313,28 @@ const InputField = ({ label, value, onChange, isRate = false, integerRate = fals
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <label style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
+        <label style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", color: "var(--tx-faint)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
         {desc && (
-          <button onClick={() => setOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: open ? "#00e5a0" : "rgba(255,255,255,0.25)", fontSize: 11, fontFamily: "'Space Mono',monospace" }}>
+          <button onClick={() => setOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: open ? "#00e5a0" : "var(--tx-veryDim)", fontSize: 11, fontFamily: "'Space Mono',monospace" }}>
             {open ? "▲" : "▼"}
           </button>
         )}
       </div>
       <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-        {!isRate && <span style={{ position: "absolute", left: 10, color: "rgba(255,255,255,0.35)", fontSize: 13, fontFamily: "'Space Mono',monospace", pointerEvents: "none" }}>$</span>}
+        {!isRate && <span style={{ position: "absolute", left: 10, color: "var(--tx-dim)", fontSize: 13, fontFamily: "'Space Mono',monospace", pointerEvents: "none" }}>$</span>}
         <input
           type="number"
           value={isRate ? (integerRate ? Math.round(value * 100) : (value * 100).toFixed(2)) : value}
           onChange={(e) => { const v = parseFloat(e.target.value); if (integerRate) onChange(Math.round(v) / 100); else onChange(isRate ? v / 100 : v); }}
           step={integerRate ? 1 : isRate ? 0.01 : 1000}
-          style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: isRate ? "8px 28px 8px 10px" : "8px 10px 8px 22px", color: "#e8eaf6", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none" }}
+          style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bd-3)", borderRadius: 7, padding: isRate ? "8px 28px 8px 10px" : "8px 10px 8px 22px", color: "var(--tx-strong)", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none" }}
           onFocus={(e) => (e.target.style.borderColor = "rgba(0,229,160,0.4)")}
-          onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
+          onBlur={(e) => (e.target.style.borderColor = "var(--bd-3)")}
         />
-        {isRate && <span style={{ position: "absolute", right: 10, color: "rgba(255,255,255,0.35)", fontSize: 12, fontFamily: "'Space Mono',monospace", pointerEvents: "none" }}>%</span>}
+        {isRate && <span style={{ position: "absolute", right: 10, color: "var(--tx-dim)", fontSize: 12, fontFamily: "'Space Mono',monospace", pointerEvents: "none" }}>%</span>}
       </div>
       {open && desc && (
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "'Space Mono',monospace", lineHeight: 1.7, background: "rgba(0,229,160,0.04)", border: "1px solid rgba(0,229,160,0.12)", borderRadius: 6, padding: "10px 12px", whiteSpace: "pre-line" }}>{desc}</div>
+        <div style={{ fontSize: 11, color: "var(--tx-faint)", fontFamily: "'Space Mono',monospace", lineHeight: 1.7, background: "rgba(0,229,160,0.04)", border: "1px solid rgba(0,229,160,0.12)", borderRadius: 6, padding: "10px 12px", whiteSpace: "pre-line" }}>{desc}</div>
       )}
     </div>
   );
@@ -352,7 +352,7 @@ const GoNoGoBanner = ({ verdictKey, dPayback, npv }) => {
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 24, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, color: cfg.color, letterSpacing: "0.04em", lineHeight: 1.15 }}>{cfg.label}</div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "'Space Mono',monospace", marginTop: 5 }}>{cfg.desc}</div>
+        <div style={{ fontSize: 12, color: "var(--tx-faint)", fontFamily: "'Space Mono',monospace", marginTop: 5 }}>{cfg.desc}</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, flexShrink: 0, minWidth: 280 }}>
         {[
@@ -377,6 +377,17 @@ export default function CapExAnalyzer() {
 
   const [waccInput, setWaccInput] = useState(String(Math.round(state.wacc * 100)));
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === "undefined") return "dark";
+    return localStorage.getItem("capex-theme") || "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("capex-theme", theme); } catch {}
+  }, [theme]);
+
+  const isLight = theme === "light";
   const [countrySearch, setCountrySearch] = useState("");
   const [selectedCountry, setSelectedCountry] = useState(null);
   const effectiveWACC = useMemo(() => state.wacc + RISK_PREMIUMS[state.riskCategory], [state.wacc, state.riskCategory]);
@@ -674,17 +685,71 @@ export default function CapExAnalyzer() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #080c14; }
+
+        :root[data-theme='dark'] {
+          --bg-app:       #080c14;
+          --bg-header:    #0a0d14;
+          --bg-card:      rgba(255,255,255,0.02);
+          --bg-card-2:    rgba(255,255,255,0.03);
+          --bg-input:     rgba(255,255,255,0.04);
+          --bg-input-2:   rgba(255,255,255,0.06);
+          --bg-modal:     #0d1520;
+          --bg-overlay:   rgba(0,0,0,0.7);
+          --bg-hover:     rgba(255,255,255,0.04);
+          --bd-1:         rgba(255,255,255,0.05);
+          --bd-2:         rgba(255,255,255,0.07);
+          --bd-3:         rgba(255,255,255,0.10);
+          --bd-4:         rgba(255,255,255,0.12);
+          --bd-5:         rgba(255,255,255,0.15);
+          --tx-strong:    #e8eaf6;
+          --tx-base:      rgba(255,255,255,0.7);
+          --tx-mute:      rgba(255,255,255,0.55);
+          --tx-soft:      rgba(255,255,255,0.45);
+          --tx-faint:     rgba(255,255,255,0.4);
+          --tx-dim:       rgba(255,255,255,0.3);
+          --tx-veryDim:   rgba(255,255,255,0.25);
+          --tx-ghost:     rgba(255,255,255,0.20);
+          --grid:         rgba(255,255,255,0.04);
+          --tooltip-bg:   #0d1520;
+        }
+        :root[data-theme='light'] {
+          --bg-app:       #f6f7f9;
+          --bg-header:    #ffffff;
+          --bg-card:      #ffffff;
+          --bg-card-2:    #ffffff;
+          --bg-input:     #ffffff;
+          --bg-input-2:   #f0f2f5;
+          --bg-modal:     #ffffff;
+          --bg-overlay:   rgba(0,0,0,0.4);
+          --bg-hover:     rgba(0,0,0,0.04);
+          --bd-1:         rgba(0,0,0,0.06);
+          --bd-2:         rgba(0,0,0,0.08);
+          --bd-3:         rgba(0,0,0,0.12);
+          --bd-4:         rgba(0,0,0,0.15);
+          --bd-5:         rgba(0,0,0,0.18);
+          --tx-strong:    #0d1520;
+          --tx-base:      rgba(0,0,0,0.78);
+          --tx-mute:      rgba(0,0,0,0.62);
+          --tx-soft:      rgba(0,0,0,0.55);
+          --tx-faint:     rgba(0,0,0,0.5);
+          --tx-dim:       rgba(0,0,0,0.42);
+          --tx-veryDim:   rgba(0,0,0,0.32);
+          --tx-ghost:     rgba(0,0,0,0.22);
+          --grid:         rgba(0,0,0,0.06);
+          --tooltip-bg:   #ffffff;
+        }
+
+        body { background: var(--bg-app); transition: background 0.2s ease; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: var(--bd-3); border-radius: 2px; }
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type=number] { -moz-appearance: textfield; }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "#080c14", color: "#e8eaf6", fontFamily: "'Space Mono',monospace", paddingBottom: 60 }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg-app)", color: "var(--tx-strong)", fontFamily: "'Space Mono',monospace", paddingBottom: 60, transition: "background 0.2s ease, color 0.2s ease" }}>
 
         {/* Header */}
-        <div style={{ borderBottom: "1px solid rgba(255,153,0,0.15)", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0d14", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(20px)" }}>
+        <div style={{ borderBottom: "1px solid rgba(255,153,0,0.15)", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-header)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(20px)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {/* Amazon-style logo mark */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -692,9 +757,9 @@ export default function CapExAnalyzer() {
                 <img src="https://i.imgur.com/vS9wbFB.png" width="36" height="36" style={{ borderRadius: 6, objectFit: "cover" }} />
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 20, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em" }}>CapEx Financial Analyzer</span>
+                    <span style={{ fontSize: 20, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "var(--tx-strong)", letterSpacing: "-0.02em" }}>CapEx Financial Analyzer</span>
                   </div>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.14em", fontFamily: "'Space Mono',monospace", marginTop: 2 }}>INVESTMENT DECISION FRAMEWORK · AMAZON INTERNAL</div>
+                  <div style={{ fontSize: 10, color: "var(--tx-faint)", letterSpacing: "0.14em", fontFamily: "'Space Mono',monospace", marginTop: 2 }}>INVESTMENT DECISION FRAMEWORK · AMAZON INTERNAL</div>
                 </div>
               </div>
           </div>
@@ -712,6 +777,13 @@ export default function CapExAnalyzer() {
               onMouseLeave={e => { e.target.style.background = "rgba(255,153,0,0.08)"; }}>
               ↺ RESET
             </button>
+            <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
+              title={isLight ? "Switch to dark mode" : "Switch to light mode"}
+              style={{ padding: "6px 12px", borderRadius: 4, background: "transparent", border: "1px solid var(--bd-3)", color: "var(--tx-base)", fontSize: 13, cursor: "pointer", fontFamily: "'Space Mono',monospace", letterSpacing: "0.06em", fontWeight: 700, lineHeight: 1 }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--bd-5)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--bd-3)"; }}>
+              {isLight ? "🌙" : "☀"}
+            </button>
           </div>
         </div>
 
@@ -724,14 +796,14 @@ export default function CapExAnalyzer() {
           <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: 20 }}>
 
             {/* Input Panel */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 22, display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ fontSize: 11, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>Project Parameters</div>
+            <div style={{ background: "var(--bg-card)", border: "1px solid var(--bd-2)", borderRadius: 14, padding: 22, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ fontSize: 11, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "var(--tx-faint)", letterSpacing: "0.1em", textTransform: "uppercase", paddingBottom: 8, borderBottom: "1px solid var(--bd-1)" }}>Project Parameters</div>
 
               <InputField label="Initial Investment" value={state.initialInvestment} onChange={update("initialInvestment")} />
               {/* WACC + Country Picker */}
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <label style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>WACC</label>
+                  <label style={{ fontSize: 10, color: "var(--tx-faint)", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>WACC</label>
                   {selectedCountry && (
                     <span style={{ fontSize: 10, color: WACC_TIERS[selectedCountry.tier].color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>
                       {selectedCountry.name} · {WACC_TIERS[selectedCountry.tier].label}
@@ -756,10 +828,10 @@ export default function CapExAnalyzer() {
                           update("wacc")(0.10);
                         }
                       }}
-                      style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "8px 28px 8px 10px", color: "#e8eaf6", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none" }}
+                      style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bd-3)", borderRadius: 7, padding: "8px 28px 8px 10px", color: "var(--tx-strong)", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none" }}
                       onFocus={e => (e.target.style.borderColor = "rgba(0,229,160,0.4)")}
                     />
-                    <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", fontSize: 11, pointerEvents: "none" }}>%</span>
+                    <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "var(--tx-dim)", fontSize: 11, pointerEvents: "none" }}>%</span>
                   </div>
                   <button
                     onClick={() => setShowCountryPicker(true)}
@@ -775,12 +847,12 @@ export default function CapExAnalyzer() {
               {showCountryPicker && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
                   onClick={() => { setShowCountryPicker(false); setCountrySearch(""); }}>
-                  <div style={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 24, width: 460, maxHeight: "80vh", display: "flex", flexDirection: "column", gap: 14 }}
+                  <div style={{ background: "var(--bg-modal)", border: "1px solid var(--bd-4)", borderRadius: 16, padding: 24, width: 460, maxHeight: "80vh", display: "flex", flexDirection: "column", gap: 14 }}
                     onClick={e => e.stopPropagation()}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#e8eaf6", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Country WACC — Amazon AMET</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "var(--tx-strong)", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Country WACC — Amazon AMET</span>
                       <button onClick={() => { setShowCountryPicker(false); setCountrySearch(""); }}
-                        style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 18, cursor: "pointer", padding: "0 4px" }}>✕</button>
+                        style={{ background: "none", border: "none", color: "var(--tx-faint)", fontSize: 18, cursor: "pointer", padding: "0 4px" }}>✕</button>
                     </div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {Object.entries(WACC_TIERS).map(([key, t]) => (
@@ -795,7 +867,7 @@ export default function CapExAnalyzer() {
                       value={countrySearch}
                       onChange={e => setCountrySearch(e.target.value)}
                       autoFocus
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "8px 12px", color: "#e8eaf6", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none", width: "100%" }}
+                      style={{ background: "var(--bg-input-2)", border: "1px solid var(--bd-5)", borderRadius: 8, padding: "8px 12px", color: "var(--tx-strong)", fontSize: 13, fontFamily: "'Space Mono',monospace", outline: "none", width: "100%" }}
                     />
                     <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 2, maxHeight: 380 }}>
                       {COUNTRY_WACC
@@ -813,9 +885,9 @@ export default function CapExAnalyzer() {
                                 setCountrySearch("");
                               }}
                               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, cursor: "pointer", background: isSelected ? t.bg : "transparent", border: isSelected ? `1px solid ${t.color}40` : "1px solid transparent", transition: "all 0.1s" }}
-                              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "var(--bg-hover)"; }}
                               onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}>
-                              <span style={{ fontSize: 13, color: "#e8eaf6", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{c.name}</span>
+                              <span style={{ fontSize: 13, color: "var(--tx-strong)", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{c.name}</span>
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 12, background: t.bg, color: t.color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>{t.label.split(" ")[0]}</span>
                                 <span style={{ fontSize: 13, fontWeight: 700, color: t.color, fontFamily: "'Space Mono',monospace", minWidth: 40, textAlign: "right" }}>{c.wacc}%</span>
@@ -824,10 +896,10 @@ export default function CapExAnalyzer() {
                           );
                         })}
                       {COUNTRY_WACC.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
-                        <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: 24, fontSize: 13 }}>No countries found</div>
+                        <div style={{ textAlign: "center", color: "var(--tx-dim)", padding: 24, fontSize: 13 }}>No countries found</div>
                       )}
                     </div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", fontFamily: "'Space Mono',monospace" }}>Amazon Internal · Country Risk Adjusted WACCs · 30-APR-2025</div>
+                    <div style={{ fontSize: 10, color: "var(--tx-veryDim)", textAlign: "center", fontFamily: "'Space Mono',monospace" }}>Amazon Internal · Country Risk Adjusted WACCs · 30-APR-2025</div>
                   </div>
                 </div>
               )}
@@ -835,7 +907,7 @@ export default function CapExAnalyzer() {
               {/* Risk Category Selector */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <label style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>Project Risk Category</label>
+                  <label style={{ fontSize: 10, color: "var(--tx-faint)", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'Space Mono',monospace" }}>Project Risk Category</label>
                   <span style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", color: RISK_CONFIG[state.riskCategory].color, fontWeight: 700 }}>
                     Effective WACC: {((state.wacc + RISK_PREMIUMS[state.riskCategory]) * 100).toFixed(1)}%
                   </span>
@@ -846,26 +918,26 @@ export default function CapExAnalyzer() {
                     const isSelected = state.riskCategory === cat;
                     return (
                       <div key={cat} onClick={() => setState(s => ({ ...s, riskCategory: cat }))}
-                        style={{ cursor: "pointer", borderRadius: 10, padding: "10px 10px", border: `1.5px solid ${isSelected ? cfg.color : "rgba(255,255,255,0.08)"}`, background: isSelected ? cfg.bg : "rgba(255,255,255,0.02)", transition: "all 0.15s" }}>
+                        style={{ cursor: "pointer", borderRadius: 10, padding: "10px 10px", border: `1.5px solid ${isSelected ? cfg.color : "var(--bd-2)"}`, background: isSelected ? cfg.bg : "var(--bg-card)", transition: "all 0.15s" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
                           <div style={{ width: 7, height: 7, borderRadius: "50%", background: cfg.color, flexShrink: 0 }} />
-                          <span style={{ fontSize: 11, fontWeight: 700, color: isSelected ? cfg.color : "rgba(255,255,255,0.6)", fontFamily: "'Space Mono',monospace" }}>{cfg.label}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: isSelected ? cfg.color : "var(--tx-base)", fontFamily: "'Space Mono',monospace" }}>{cfg.label}</span>
                         </div>
                         <div style={{ fontSize: 18, fontWeight: 700, color: cfg.color, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>{cfg.premium}</div>
-                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", lineHeight: 1.4 }}>{cfg.desc}</div>
+                        <div style={{ fontSize: 9, color: "var(--tx-dim)", lineHeight: 1.4 }}>{cfg.desc}</div>
                       </div>
                     );
                   })}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: `${RISK_CONFIG[state.riskCategory].color}10`, border: `1px solid ${RISK_CONFIG[state.riskCategory].color}30`, borderRadius: 8 }}>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "'Space Mono',monospace" }}>
+                  <span style={{ fontSize: 10, color: "var(--tx-faint)", fontFamily: "'Space Mono',monospace" }}>
                     {((state.wacc) * 100).toFixed(1)}% base WACC
                   </span>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>+</span>
+                  <span style={{ fontSize: 10, color: "var(--tx-dim)" }}>+</span>
                   <span style={{ fontSize: 10, color: RISK_CONFIG[state.riskCategory].color, fontFamily: "'Space Mono',monospace" }}>
                     {(RISK_PREMIUMS[state.riskCategory] * 100).toFixed(1)}% risk premium
                   </span>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>=</span>
+                  <span style={{ fontSize: 10, color: "var(--tx-dim)" }}>=</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: RISK_CONFIG[state.riskCategory].color, fontFamily: "'Space Mono',monospace" }}>
                     {((state.wacc + RISK_PREMIUMS[state.riskCategory]) * 100).toFixed(1)}% effective WACC
                   </span>
@@ -874,19 +946,19 @@ export default function CapExAnalyzer() {
 
               {/* 3YF Entitlement */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em", textTransform: "uppercase" }}>3YF Entitlement</label>
+                <label style={{ fontSize: 10, color: "var(--tx-faint)", letterSpacing: "0.06em", textTransform: "uppercase" }}>3YF Entitlement</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                   {["y1","y2","y3"].map((key, i) => (
                     <div key={key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textAlign: "center" }}>YEAR {i + 1}</span>
+                      <span style={{ fontSize: 9, color: "var(--tx-dim)", fontFamily: "'Space Mono',monospace", textAlign: "center" }}>YEAR {i + 1}</span>
                       <div style={{ position: "relative" }}>
-                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", fontSize: 11, pointerEvents: "none" }}>$</span>
+                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--tx-dim)", fontSize: 11, pointerEvents: "none" }}>$</span>
                         <input type="number" value={yearCFs[key]}
                           onChange={e => setYearCFs(p => ({ ...p, [key]: e.target.value }))}
                           placeholder="0"
-                          style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "8px 8px 8px 20px", color: "#e8eaf6", fontSize: 12, fontFamily: "'Space Mono',monospace", outline: "none", textAlign: "right" }}
+                          style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bd-3)", borderRadius: 7, padding: "8px 8px 8px 20px", color: "var(--tx-strong)", fontSize: 12, fontFamily: "'Space Mono',monospace", outline: "none", textAlign: "right" }}
                           onFocus={e => (e.target.style.borderColor = "rgba(0,229,160,0.4)")}
-                          onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.1)")} />
+                          onBlur={e => (e.target.style.borderColor = "var(--bd-3)")} />
                       </div>
                     </div>
                   ))}
@@ -907,15 +979,15 @@ export default function CapExAnalyzer() {
                       const selBorder= isY1 ? "rgba(255,77,109,0.6)" : "rgba(255,153,0,0.6)";
                       return (
                         <div key={val} onClick={() => setState(s => ({ ...s, startMonth: val }))}
-                          style={{ cursor: "pointer", borderRadius: 7, padding: "6px 4px", textAlign: "center", border: `1px solid ${isSelected ? selBorder : "rgba(255,255,255,0.08)"}`, background: isSelected ? selBg : "rgba(255,255,255,0.02)", transition: "all 0.12s" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? selColor : "rgba(255,255,255,0.6)", fontFamily: "'Space Mono',monospace" }}>{label}</div>
-                          <div style={{ fontSize: 9, color: isSelected ? selColor : "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", opacity: isSelected ? 0.8 : 1 }}>{tag}</div>
+                          style={{ cursor: "pointer", borderRadius: 7, padding: "6px 4px", textAlign: "center", border: `1px solid ${isSelected ? selBorder : "var(--bd-2)"}`, background: isSelected ? selBg : "var(--bg-card)", transition: "all 0.12s" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? selColor : "var(--tx-base)", fontFamily: "'Space Mono',monospace" }}>{label}</div>
+                          <div style={{ fontSize: 9, color: isSelected ? selColor : "var(--tx-dim)", fontFamily: "'Space Mono',monospace", opacity: isSelected ? 0.8 : 1 }}>{tag}</div>
                         </div>
                       );
                     })}
                   </div>
                   <div style={{ padding: "6px 10px", borderRadius: 6, background: state.startMonth === 0 ? "rgba(255,77,109,0.06)" : "rgba(255,153,0,0.06)", border: `1px solid ${state.startMonth === 0 ? "rgba(255,77,109,0.2)" : "rgba(255,153,0,0.2)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono',monospace" }}>
+                    <span style={{ fontSize: 10, color: "var(--tx-dim)", fontFamily: "'Space Mono',monospace" }}>
                       {state.startMonth === 0
                         ? "No Y0 entitlement — full 3YF runs Y1 → Y3"
                         : state.startMonth === 1
@@ -929,22 +1001,22 @@ export default function CapExAnalyzer() {
                   {parsedCashflows.length > 0 && (
                     <div style={{ display: "grid", gridTemplateColumns: state.startMonth === 0 ? "1fr 1fr 1fr 1fr" : state.startMonth === 1 ? "1fr 1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 6, marginTop: 2 }}>
                       {(state.startMonth === 0 ? [
-                        { label: "Y0 (0m)",  value: "—",                                              color: "rgba(255,255,255,0.25)" },
-                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "#e8eaf6" },
-                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "#e8eaf6" },
-                        { label: "Y3 (12m)", value: fmt(adjustedCashflows.y3 || 0, 0),                color: "#e8eaf6" },
+                        { label: "Y0 (0m)",  value: "—",                                              color: "var(--tx-veryDim)" },
+                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "var(--tx-strong)" },
+                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "var(--tx-strong)" },
+                        { label: "Y3 (12m)", value: fmt(adjustedCashflows.y3 || 0, 0),                color: "var(--tx-strong)" },
                       ] : state.startMonth === 1 ? [
                         { label: "Y0 (12m)", value: fmt(adjustedCashflows.y0Ent || 0, 0),             color: "rgba(0,229,160,0.7)" },
-                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "#e8eaf6" },
-                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "#e8eaf6" },
+                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "var(--tx-strong)" },
+                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "var(--tx-strong)" },
                       ] : [
                         { label: `Y0 (${adjustedCashflows.y0Months}m)`, value: fmt(adjustedCashflows.y0Ent || 0, 0), color: "rgba(0,229,160,0.7)" },
-                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "#e8eaf6" },
-                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "#e8eaf6" },
+                        { label: "Y1 (12m)", value: fmt(adjustedCashflows.y1 || 0, 0),                color: "var(--tx-strong)" },
+                        { label: "Y2 (12m)", value: fmt(adjustedCashflows.y2 || 0, 0),                color: "var(--tx-strong)" },
                         { label: `Y3 (${adjustedCashflows.y3Months}m)`, value: fmt(adjustedCashflows.y3 || 0, 0), color: "rgba(0,229,160,0.7)" },
                       ]).map(({ label, value, color }) => (
                         <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "center" }}>
-                          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>{label}</span>
+                          <span style={{ fontSize: 8, color: "var(--tx-dim)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>{label}</span>
                           <span style={{ fontSize: 10, color, fontFamily: "'Space Mono',monospace", fontWeight: 700 }}>{value}</span>
                         </div>
                       ))}
@@ -952,7 +1024,7 @@ export default function CapExAnalyzer() {
                   )}
                 </div>
 
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>
+                <span style={{ fontSize: 11, color: "var(--tx-veryDim)", lineHeight: 1.6 }}>
                 </span>
 
                 {/* Mini summary */}
@@ -965,34 +1037,34 @@ export default function CapExAnalyzer() {
                         { label: "Trend", value: cfSummary.trend, color: cfSummary.trendColor },
                       ].map(({ label, value, color }) => (
                         <div key={label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>{label}</span>
+                          <span style={{ fontSize: 9, color: "var(--tx-dim)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>{label}</span>
                           <span style={{ fontSize: 12, color: color || "#e8eaf6", fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700 }}>{value}</span>
                         </div>
                       ))}
                     </div>
                     {cfSummary.growth !== null && (
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>Growth Y1→Y{cfSummary.vals.length}</span>
+                        <span style={{ fontSize: 9, color: "var(--tx-dim)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>Growth Y1→Y{cfSummary.vals.length}</span>
                         <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "'Space Mono',monospace", color: cfSummary.growth >= 0 ? "#00e5a0" : "#ff4d6d", background: cfSummary.growth >= 0 ? "rgba(0,229,160,0.1)" : "rgba(255,77,109,0.1)", border: `1px solid ${cfSummary.growth >= 0 ? "rgba(0,229,160,0.2)" : "rgba(255,77,109,0.2)"}`, borderRadius: 4, padding: "2px 6px" }}>
                           {cfSummary.growth >= 0 ? "+" : ""}{(cfSummary.growth * 100).toFixed(1)}%
                         </span>
                       </div>
                     )}
                     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>Entitlement Profile</span>
+                      <span style={{ fontSize: 9, color: "var(--tx-dim)", fontFamily: "'Space Mono',monospace", textTransform: "uppercase" }}>Entitlement Profile</span>
                       <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 36 }}>
                         {cfSummary.vals.map((v, i) => {
                           const pct = cfSummary.maxVal > 0 ? (v / cfSummary.maxVal) * 100 : 0;
                           return (
                             <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%", justifyContent: "flex-end" }}>
-                              <span style={{ fontSize: 8, color: "rgba(255,255,255,0.5)", fontFamily: "'Space Mono',monospace", marginBottom: 2, whiteSpace: "nowrap" }}>{fmt(v, 0)}</span>
+                              <span style={{ fontSize: 8, color: "var(--tx-faint)", fontFamily: "'Space Mono',monospace", marginBottom: 2, whiteSpace: "nowrap" }}>{fmt(v, 0)}</span>
                               <div style={{ width: "100%", height: `${Math.max(pct, 8)}%`, background: v >= 0 ? "rgba(0,229,160,0.5)" : "rgba(255,77,109,0.5)", borderRadius: "3px 3px 0 0", transition: "height 0.3s ease" }} />
                             </div>
                           );
                         })}
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
-                        {cfSummary.vals.map((_, i) => <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 8, color: "rgba(255,255,255,0.3)", fontFamily: "'Space Mono',monospace" }}>Y{i + 1}</div>)}
+                        {cfSummary.vals.map((_, i) => <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 8, color: "var(--tx-dim)", fontFamily: "'Space Mono',monospace" }}>Y{i + 1}</div>)}
                       </div>
                     </div>
                   </div>
@@ -1011,28 +1083,28 @@ export default function CapExAnalyzer() {
                     <MetricCard label="ROI" value={m.roi !== null ? `${(m.roi * 100).toFixed(1)}%` : "N/A"} sub="Total return on investment" verdictKey={m.roi > 0 ? "GO" : "NO-GO"} />
                   </div>
 
-                  <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Secondary Metrics</div>
+                  <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "var(--tx-faint)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Secondary Metrics</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
                     <MetricCard label="IRR" value={m.irr !== null ? fmtPct(m.irr) : "N/A"} sub={`vs effective WACC ${fmtPct(effectiveWACC)}`} verdictKey={m.irr !== null && m.irr > effectiveWACC ? "GO" : "NO-GO"} />
                     <MetricCard label="Simple Payback" value={fmtPayback(m.payback)} sub={m.payback === null ? "Not recovered within 3 yrs" : "Undiscounted recovery"} verdictKey={m.payback !== null && m.payback < 2.5 ? "GO" : m.payback !== null && m.payback <= 3 ? "AMBER_PAYBACK" : "NO-GO"} />
                   </div>
 
                   {/* Dashboard — charts inline */}
-                  <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Dashboard</div>
+                  <div style={{ fontSize: 10, fontFamily: "'Space Mono',monospace", fontWeight: 700, color: "var(--tx-faint)", letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 2, marginTop: 4 }}>▶ Dashboard</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
 
                     {/* Chart 1 */}
-                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 16px 10px" }}>
+                    <div style={{ background: "var(--bg-card)", border: "1px solid var(--bd-2)", borderRadius: 14, padding: "16px 16px 10px" }}>
                       <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Annual Entitlement + Cumulative</div>
-                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>Y0 = CapEx · Y1–Y3 = entitlement · Line = cumulative</div>
+                        <div style={{ fontSize: 12, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "var(--tx-strong)" }}>Annual Entitlement + Cumulative</div>
+                        <div style={{ fontSize: 9, color: "var(--tx-dim)", marginTop: 3 }}>Y0 = CapEx · Y1–Y3 = entitlement · Line = cumulative</div>
                       </div>
                       <ResponsiveContainer width="100%" height={220}>
                         <ComposedChart data={entitlementChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barCategoryGap="20%">
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                          <XAxis dataKey="year" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 8, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={54} />
-                          <Tooltip contentStyle={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 10 }} labelStyle={{ color: "rgba(255,255,255,0.7)", marginBottom: 4, fontWeight: 700 }} itemStyle={{ color: "rgba(255,255,255,0.55)" }}
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--grid)" vertical={false} />
+                          <XAxis dataKey="year" tick={{ fill: "var(--tx-faint)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: "var(--tx-dim)", fontSize: 8, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={54} />
+                          <Tooltip contentStyle={{ background: "var(--bg-modal)", border: "1px solid var(--bd-3)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 10 }} labelStyle={{ color: "var(--tx-base)", marginBottom: 4, fontWeight: 700 }} itemStyle={{ color: "var(--tx-mute)" }}
                             formatter={(v, n) => {
                               if (n === "investment") return [<span style={{ color: "#ff4d6d" }}>{fmt(v)}</span>, "CapEx (Y0)"];
                               if (n === "entitlement") return [<span style={{ color: "#00e5a0" }}>{fmt(v)}</span>, "Annual Entitlement"];
@@ -1040,7 +1112,7 @@ export default function CapExAnalyzer() {
                               if (n === "discounted") return [<span style={{ color: "#0096ff" }}>{fmt(v)}</span>, "Disc. Cumulative"];
                               return [fmt(v), n];
                             }} />
-                          <ReferenceLine y={0} stroke="rgba(255,255,255,0.25)" strokeWidth={1.5} />
+                          <ReferenceLine y={0} stroke="var(--tx-veryDim)" strokeWidth={1.5} />
                           <Bar dataKey="investment" stackId="main" fill="rgba(255,77,109,0.6)" radius={[0,0,4,4]} />
                           <Bar dataKey="partial" stackId="main" fill="rgba(0,229,160,0.35)" radius={[4,4,0,0]} />
                           <Bar dataKey="entitlement" stackId="main" radius={[4,4,0,0]}>
@@ -1062,30 +1134,30 @@ export default function CapExAnalyzer() {
                         ].map(({ color, label, dashed, box }) => (
                           <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             {box ? <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} /> : <div style={{ width: 14, height: 2, ...(dashed ? { backgroundImage: `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 8px)` } : { background: color }) }} />}
-                            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono'" }}>{label}</span>
+                            <span style={{ fontSize: 8, color: "var(--tx-dim)", fontFamily: "'Space Mono'" }}>{label}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Chart 2 */}
-                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 16px 10px" }}>
+                    <div style={{ background: "var(--bg-card)", border: "1px solid var(--bd-2)", borderRadius: 14, padding: "16px 16px 10px" }}>
                       <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>NPV Sensitivity vs WACC</div>
-                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
+                        <div style={{ fontSize: 12, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700, color: "var(--tx-strong)" }}>NPV Sensitivity vs WACC</div>
+                        <div style={{ fontSize: 9, color: "var(--tx-dim)", marginTop: 3 }}>
                           Green = profitable · Red = value destroying · Yellow = your WACC
                           {m?.irr != null && <span style={{ color: m.irr > effectiveWACC ? "#00e5a0" : "#ff4d6d", marginLeft: 4, fontWeight: 700 }}>· IRR = {fmtPct(m.irr)}</span>}
                         </div>
                       </div>
                       <ResponsiveContainer width="100%" height={220}>
                         <LineChart data={sensitivityData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--grid)" vertical={false} />
                           <ReferenceArea y1={0} y2={Math.max(...sensitivityData.map(d => d.npv))} fill="rgba(0,229,160,0.05)" />
                           <ReferenceArea y1={Math.min(...sensitivityData.map(d => d.npv))} y2={0} fill="rgba(255,77,109,0.05)" />
-                          <XAxis dataKey="wacc" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} interval={1} />
-                          <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 8, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={54} />
-                          <Tooltip contentStyle={{ background: "#0d1520", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 10 }} formatter={v => [<span style={{ color: v >= 0 ? "#00e5a0" : "#ff4d6d" }}>{fmt(v)}</span>, v >= 0 ? "NPV ✓" : "NPV ✗"]} />
-                          <ReferenceLine y={0} stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} label={{ value: "NPV=0", fill: "rgba(255,255,255,0.3)", fontSize: 8, position: "insideTopRight" }} />
+                          <XAxis dataKey="wacc" tick={{ fill: "var(--tx-faint)", fontSize: 9, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} interval={1} />
+                          <YAxis tick={{ fill: "var(--tx-dim)", fontSize: 8, fontFamily: "'Space Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v, 0, "")} width={54} />
+                          <Tooltip contentStyle={{ background: "var(--bg-modal)", border: "1px solid var(--bd-3)", borderRadius: 8, fontFamily: "'Space Mono'", fontSize: 10 }} formatter={v => [<span style={{ color: v >= 0 ? "#00e5a0" : "#ff4d6d" }}>{fmt(v)}</span>, v >= 0 ? "NPV ✓" : "NPV ✗"]} />
+                          <ReferenceLine y={0} stroke="var(--tx-dim)" strokeWidth={1.5} label={{ value: "NPV=0", fill: "var(--tx-dim)", fontSize: 8, position: "insideTopRight" }} />
                           <ReferenceLine x={`${(effectiveWACC * 100).toFixed(0)}%`} stroke="#ffd166" strokeDasharray="5 4" strokeWidth={2} label={{ value: `Eff. WACC ${fmtPct(effectiveWACC)}`, fill: "#ffd166", fontSize: 8, position: "insideTopLeft" }} />
                           <Line type="monotone" dataKey="npv" strokeWidth={2.5} dot={false} activeDot={{ r: 4, fill: "#00e5a0" }} stroke="#00e5a0" />
                         </LineChart>
@@ -1098,7 +1170,7 @@ export default function CapExAnalyzer() {
                         ].map(({ color, label, dashed, box }) => (
                           <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             {box ? <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} /> : <div style={{ width: 14, height: 2, backgroundImage: `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 8px)` }} />}
-                            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "'Space Mono'" }}>{label}</span>
+                            <span style={{ fontSize: 8, color: "var(--tx-dim)", fontFamily: "'Space Mono'" }}>{label}</span>
                           </div>
                         ))}
                       </div>
@@ -1107,13 +1179,13 @@ export default function CapExAnalyzer() {
                   </div>
                 </>
               ) : (
-                <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: 60, fontSize: 13 }}>Enter valid entitlement values to compute metrics</div>
+                <div style={{ textAlign: "center", color: "var(--tx-dim)", padding: 60, fontSize: 13 }}>Enter valid entitlement values to compute metrics</div>
               )}
             </div>
           </div>
 
           {/* Footer */}
-          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.18)", fontSize: 10, letterSpacing: "0.06em", marginTop: 4 }}>
+          <div style={{ textAlign: "center", color: "var(--tx-ghost)", fontSize: 10, letterSpacing: "0.06em", marginTop: 4 }}>
             CAPEX ANALYZER · ALL FIGURES IN USD · NPV / IRR / ROI / PAYBACK / CONFIDENCE NPV · FOR DECISION SUPPORT ONLY
           </div>
 
@@ -1122,4 +1194,5 @@ export default function CapExAnalyzer() {
     </>
   );
 }
+
 
